@@ -1,0 +1,143 @@
+<p/>Kubernetes documentation is thorough, and you should read it when you have the time. Until then, this is a condensed overview aimed at developers using a Kubernetes platform that should get you comfortable enough, quickly enough, to have enough of a foothold to experiment and understand the official documentation where more detail is needed.
+
+<p/>I'm not an expert, so YMMV.
+
+<aside>I assume you are familiar with Docker, linux containers, and with the basic premise of Kubernetes: you've got images and want to run them reliably, with minimal manual intervention. As a tradeoff, you must learn and invest in Kubernetes' abstractions.</aside>
+
+<section>
+  <h2>Overview</h2>
+
+  <p/><dfn>Kubernetes</dfn> (or "k8s"–which is to Kubernetes as a11y is to accessibility) runs on top of a <dfn>cluster</dfn> of <dfn>nodes</dfn>, where a node is machine as in physical or virtual machines, and a cluster is a datacenter or part of one. Nodes are the resources k8s uses to run its <a href="https://Kubernetes.io/docs/concepts/#overview">Control Plane</a> and the workloads it <dfn>schedules</dfn>. You'll interact with k8s through the control plane <a href="https://Kubernetes.io/docs/concepts/overview/Kubernetes-api">API</a>, usually from a command line client like <samp>kubectl</samp>, or from client libraries in a language of your choice.
+
+  <p/>On top of k8s, there are often services like <a href="https://www.openshift.com/">OpenShift</a> which provide yet another layer of abstraction, and can for example handle provisioning nodes and clusters running k8s for you.
+</section>
+
+<section>
+  <h2>Objects</h2>
+
+  <p/>K8s APIs are declarative. You do not say exactly how your application will run. Instead, you describe what your needs are in terms of objects (sometimes referred to as "resources" such as in <samp>kubectl</samp> help), each with a <dfn>kind</dfn>, a <dfn>specification</dfn> (or simply "spec"), and <dfn>metadata</dfn>. At k8s core, there is a basic, generic framework around these objects and listening to changes in its spec or <dfn>status</dfn>. Upon this framework, k8s builds its abstractions as decoupled extensions.
+
+  <p/>There are low level kinds of objects like Pods, usually managed by high level objects like Deployments. Objects can manage other objects by means of <dfn>controllers</dfn>. Controller-backed objects like Deployments and Services are usually where developers spend their time interfacing with k8s as they provide a high level of abstraction about common needs.
+
+  <p/>Specs are usually provided via the <samp>kubectl</samp> command line client and yaml files that look something like this:
+
+  <pre><code class="yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80</code></pre>
+
+  <p/>Controllers constantly watch the status and the spec of objects they manage, and try to keep them in sync. It's how your updates are recognized and how failures are recovered. For this reason you may find if you go "below" an abstraction and try to change a lower level object's spec directly, your changes may quickly be undone as k8s thinks it's "recovering" your objects that strayed from their specs. It is also technically possible to create situations where the same objects may have multiple conflicting states specified by other objects, causing controllers to constantly change their states back and forth between the differing specs.
+
+  <p/>All objects' metadata includes a <dfn>name</dfn>, lower case strings made up of alphanumerics, dashes, and dots, unique among other objects of the same type, and a <dfn>uid</dfn>, unique among all objects over the lifetime of the cluster. Name is required. Uids are provisioned automatically. Metadata requirements vary by object kind.
+
+  <p/>Most of your <samp>kubectl</samp> usage will be via the <samp>create</samp>, <samp>get</samp>, and <samp>replace</samp> subcommands which work with objects, their specs and statuses (for example <samp>kubectl get -o yaml deployments my-deployment</samp>).
+</section>
+
+<section>
+  <h3>Pods</h3>
+
+  <p/>A <dfn>pod</dfn> defines a single deployable unit as one or more containers that share networking and storage. This is where your code runs. A pod is to a container like a VM is to your application's process(es). Most pods will run one container, and most containers will run a single main process. Each pod gets its own IP address. Like VMs, pods are your unit of horizontal scaling: pods are <dfn>replicated</dfn> by a kind of controller, like a ReplicaSet. Unlike VMs, pods are always ephemeral: they are short lived, and they don't maintain state or their IP addresses after they are destroyed. Non-volatile, persistent storage is provided by a different object, a <dfn>PersistentVolume</dfn>. A load balanced virtual IP is provided by a <dfn>Service</dfn>.
+
+  <p/>Pods created directly are not maintained by a specific controller, so you likely will spec and create pods indirectly through templates inside other objects' specs. Templates tell controllers, like the DeploymentController (which uses a PodTemplateSpec inside a DeploymentSpec), how to define PodSpecs for pods they manage.
+</section>
+
+<section>
+  <h3>Deployments</h3>
+
+  <p/>Deployments accomplish deploying and updating your application as a set of containers with various resource requirements to a number of scheduled pods. Generally, your first steps into k8s will be by defining a DeploymentSpec. Technically, a Deployment manages <a href="https://Kubernetes.io/docs/concepts/workloads/controllers/replicaset/">ReplicaSets</a>, and each ReplicaSet manages its own set of Pods.
+
+  <p/>In addition to usual spec requirements (<samp>apiVersion</samp>, <samp>kind</samp>, <samp>metadata</samp>) a basic Deployment spec includes...
+
+  <dl>
+    <dt><samp>spec.template</samp></dt>
+    <dd>A <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#podtemplatespec-v1-core">PodTemplateSpec</a>, which defines the containers and volumes about a pod. A container spec includes the image to use, and the ports to be exposed, like so:
+      <pre><code class="yaml">  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80</code></pre>
+
+      <p/>Changing the template will result in a <dfn>rollout</dfn>. This will create a new ReplicaSet with pods using the updated template, scale it up to the number of desired replicas, and scale down the old ReplicaSet to 0. Deployments have a <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#deploymentstrategy-v1-apps">DeploymentStrategy</a> which defaults to RollingUpdate that maintains at least 75% and at most 125% of desired replicas up at all times (rounded).
+    </dd>
+
+    <dt><samp>spec.selector</samp></dt>
+    <dd>An immutable <a href="https://Kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors"><dfn>label selector</dfn></a> that is intended for developers to group pods to be managed by a <strong>single</strong> Deployment. Multiple deployments should never select the same pod(s). Generally this will be the same as the pods' label:
+      <pre><code class="yaml">  selector:
+    matchLabels:
+      app: nginx</code></pre>
+    </dd>
+
+    <dt><samp>spec.replicas</samp></dt>
+    <dd>The number of pods to run ("replicas") among pods matching the selector.
+      <pre><code class="yaml">  replicas: 3</code></pre>
+    </dd>
+  </dl>
+
+  <p/>For more detailed configuration, see <a href="https://Kubernetes.io/docs/concepts/workloads/controllers/deployment/#writing-a-deployment-spec">Writing a Deployment Spec</a> and the <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#deployment-v1-apps">Deployment API reference</a>.
+</section>
+
+<section>
+  <h3>Services, Endpoints, and discovery</h3>
+
+  <p/>Deploying your application may be all you need if it does purely background work. However if your application provides a remote API, you can use a <dfn>Service</dfn> object to define a virtual IP (with resolvable domain name, if you're using KubeDNS) that load balances among the service's selected pods. A service spec selects pods the same way deployments do, via label selectors.
+
+  <p/>Under the hood, the <dfn>ServiceController</dfn> maintains an <dfn>Endpoint</dfn> which lists the IPs and ports of healthy pods with each Service. Nodes in the cluster are configured to load balance connections to the single virtual IP (called "cluster IP") among the pods, via simple round robin (at least by default).
+
+  <pre><code class="yaml">kind: Service
+apiVersion: v1
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80</code></pre>
+
+  <p/>Services can be discovered using <a href="https://Kubernetes.io/docs/concepts/services-networking/service/#environment-variables">docker-style environment variables</a> or via <a href="https://Kubernetes.io/docs/concepts/services-networking/service/#dns">DNS</a>.
+
+  <p/>To get domain names, you must use KubeDNS. KubeDNS is an addon service and deployment that runs on k8s like any other, additionally configuring pods to use it for name resolution, and "watches the Kubernetes API for new Services and creates a set of DNS records for each". KubeDNS assigns a domain name with the format of <samp>"${service.name}.${service.namespace}.svc.${cluster.DNSDomain}"</samp> with an A record pointing at the cluster IP. The service name and namespace come from metadata. If no explicit namespace provided, <samp>"default"</samp> is used. The cluster <samp>DNSDomain</samp> comes from the <a href="https://github.com/Kubernetes/Kubernetes/blob/master/cmd/kubeadm/app/phases/addons/dns/manifests.go#L84">KubeDNS config map</a> (more on config maps later). The default is <a href="https://github.com/Kubernetes/Kubernetes/blob/master/cmd/kubeadm/app/apis/kubeadm/v1alpha1/defaults.go#L35"><samp>"cluster.local"</samp></a>. With defaults, the example above would be resolvable from pods within the cluster at <samp>"nginx.default.svc.cluster.local"</samp>. Pods' DNS resolution has some additional defaults configures, so technically pods in the same namespace and the same cluster could simply use <samp>"nginx"</samp> domain name.
+
+  <p/>Services have different types. By default, the <samp>ClusterIP</samp> type is used, which does nothing more than assign a cluster IP and expose it to the cluster, but only the cluster. To expose services outside of the cluster, use the <a href="https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer"><samp>LoadBalancer</samp></a>. type. While there is a <samp>LoadBalancer</samp> type, most services will do some kind of load balancing.
+</section>
+
+<section>
+  <h2>Summary</h2>
+
+  <p/>To recap the basics:
+
+  <ul>
+    <li>Kubernetes uses a framework of "objects" with "metadata" and "specifications."
+    <li>Many objects are managed by "controllers" which are processses running within the Kubernetes control plane that watch objects status and specifications, automating the work necessary to keep the resources described by the objects in sync with their specifications.
+    <li>Your application runs as a set of containers inside replicated, ephemeral Pods. The PodSpec has which image to use and the ports to expose.
+    <li>You can deploy and replicate your application using a Deployment and a PodSpecTemplate.
+    <li>You can expose your application to other pods using a Service which creates a persistent, virtual IP routable within the cluster and, if KubeDNS is used, a domain name resolvable within the cluster's Pods.
+  </ul>
+
+  <p/>In part two I will likely talk about how to templatize configuration for your application and how to provide persistent storage to your pods. Please comment if there is something else you'd like a terse, useful summary of.
+
+  <p/>Thanks for reading!
+</section>
