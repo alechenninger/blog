@@ -83,11 +83,11 @@
 <p>The last dimension is about when the check is run. We start with two broad categories:</p>
 
 <dl>
-    <dt>Synchronous</dt>
-    <dd>A synchronous check is run when the endpoint is queried, blocking until a result is determined.</dd>
+  <dt>Synchronous</dt>
+  <dd>A synchronous check is run when the endpoint is queried, blocking until a result is determined.</dd>
 
-    <dt>Asynchronous</dt>
-    <dd>Asynchronous checks are run in the background, and endpoints serve the last seen result immediately.</dd>
+  <dt>Asynchronous</dt>
+  <dd>Asynchronous checks are run in the background, and endpoints serve the last seen result immediately.</dd>
 </dl>
 
 <p>One of our rules was to run health checks in the background (asynchronously). If your load balancers are scaled out much further than your service, all those load balancer health checks start to add up to quite a bit of traffic. This can quickly escalate to hammering your service and dependencies with health checks. Asynchronous checks combat this problem by decoupling the timing of the check from the timing of the query: health requests return immediately, serving cached results from the last time the checks actually ran. If you have more service than load balancer replicas, you may benefit from keeping them synchronous. A hybrid approach–use a cached result while valid, otherwise check synchronously–also works well.</p>

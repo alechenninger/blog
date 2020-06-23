@@ -1,6 +1,20 @@
 import 'package:charcode/charcode.dart';
 import 'package:markdown/markdown.dart';
 
+final blogExtensionSet = ExtensionSet(
+  [
+    AsideBlockSyntax(),
+    FootnoteSyntax(),
+    DefinitionListSyntax(),
+    ...ExtensionSet.gitHubWeb.blockSyntaxes
+  ],
+  [
+    VariableSyntax(),
+    FootnoteLinkSyntax(),
+    ...ExtensionSet.gitHubWeb.inlineSyntaxes
+  ]
+);
+
 // Adapted from BlockquoteSyntax
 class AsideBlockSyntax extends BlockSyntax {
   /// Matches // with a space and some optional text, or just a lone pair of /.

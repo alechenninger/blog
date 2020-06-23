@@ -79,20 +79,20 @@ spec:
         ports:
         - containerPort: 80</code></pre>
 
-      <p/>Changing the template will result in a <dfn>rollout</dfn>. This will create a new ReplicaSet with pods using the updated template, scale it up to the number of desired replicas, and scale down the old ReplicaSet to 0. Deployments have a <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#deploymentstrategy-v1-apps">DeploymentStrategy</a> which defaults to RollingUpdate that maintains at least 75% and at most 125% of desired replicas up at all times (rounded).
+  <p/>Changing the template will result in a <dfn>rollout</dfn>. This will create a new ReplicaSet with pods using the updated template, scale it up to the number of desired replicas, and scale down the old ReplicaSet to 0. Deployments have a <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#deploymentstrategy-v1-apps">DeploymentStrategy</a> which defaults to RollingUpdate that maintains at least 75% and at most 125% of desired replicas up at all times (rounded).
     </dd>
 
-    <dt><samp>spec.selector</samp></dt>
-    <dd>An immutable <a href="https://Kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors"><dfn>label selector</dfn></a> that is intended for developers to group pods to be managed by a <strong>single</strong> Deployment. Multiple deployments should never select the same pod(s). Generally this will be the same as the pods' label:
-      <pre><code class="yaml">  selector:
+  <dt><samp>spec.selector</samp></dt>
+  <dd>An immutable <a href="https://Kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors"><dfn>label selector</dfn></a> that is intended for developers to group pods to be managed by a <strong>single</strong> Deployment. Multiple deployments should never select the same pod(s). Generally this will be the same as the pods' label:
+    <pre><code class="yaml">  selector:
     matchLabels:
       app: nginx</code></pre>
-    </dd>
+  </dd>
 
-    <dt><samp>spec.replicas</samp></dt>
-    <dd>The number of pods to run ("replicas") among pods matching the selector.
-      <pre><code class="yaml">  replicas: 3</code></pre>
-    </dd>
+  <dt><samp>spec.replicas</samp></dt>
+  <dd>The number of pods to run ("replicas") among pods matching the selector.
+    <pre><code class="yaml">  replicas: 3</code></pre>
+  </dd>
   </dl>
 
   <p/>For more detailed configuration, see <a href="https://Kubernetes.io/docs/concepts/workloads/controllers/deployment/#writing-a-deployment-spec">Writing a Deployment Spec</a> and the <a href="https://Kubernetes.io/docs/reference/generated/Kubernetes-api/v1.9/#deployment-v1-apps">Deployment API reference</a>.
