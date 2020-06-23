@@ -32,7 +32,7 @@ void main(List<String> arguments) async {
     var post = entity as File;
     var name = basenameWithoutExtension(post.path);
     var contents = await post.readAsString();
-    var html = markdownToHtml(contents, extensionSet: blogExtensionSet);
+    var html = blogMarkdownToHtml(contents, extensionSet: blogExtensionSet);
     var builtPost = out.childFile('$name.html');
     await builtPost.writeAsString(html);
     built.add(builtPost.path);

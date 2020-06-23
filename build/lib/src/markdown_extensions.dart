@@ -1,19 +1,16 @@
 import 'package:charcode/charcode.dart';
 import 'package:markdown/markdown.dart';
 
-final blogExtensionSet = ExtensionSet(
-  [
-    AsideBlockSyntax(),
-    FootnoteSyntax(),
-    DefinitionListSyntax(),
-    ...ExtensionSet.gitHubWeb.blockSyntaxes
-  ],
-  [
-    VariableSyntax(),
-    FootnoteLinkSyntax(),
-    ...ExtensionSet.gitHubWeb.inlineSyntaxes
-  ]
-);
+final blogExtensionSet = ExtensionSet([
+  AsideBlockSyntax(),
+  FootnoteSyntax(),
+  DefinitionListSyntax(),
+  ...ExtensionSet.gitHubWeb.blockSyntaxes
+], [
+  VariableSyntax(),
+  FootnoteLinkSyntax(),
+  ...ExtensionSet.gitHubWeb.inlineSyntaxes
+]);
 
 // Adapted from BlockquoteSyntax
 class AsideBlockSyntax extends BlockSyntax {
@@ -156,11 +153,16 @@ class FootnoteLinkSyntax extends InlineSyntax {
 }
 
 class FootnoteSyntax extends BlockSyntax {
-  static final _pattern = RegExp('^\^(\d+):[ ]*(.*)');
-  static final _continuationPattern = RegExp(r'^\^[ ]*(.*)');
+  static final _pattern = RegExp(r'^\^(\d+):[ ]*(.*)$');
+  static final _continuationPattern = RegExp(r'^\^[ ]*(.*)$');
 
   @override
   RegExp get pattern => _pattern;
+
+  @override
+  bool canParse(BlockParser parser) {
+    return super.canParse(parser);
+  }
 
   @override
   Node parse(BlockParser parser) {
@@ -168,7 +170,7 @@ class FootnoteSyntax extends BlockSyntax {
     if (start == null) throw ArgumentError();
     var number = start[1];
 
-    var lines = [];
+    var lines = <String>[];
     lines.add(start[2]);
 
     parser.advance();
@@ -191,15 +193,46 @@ class FootnoteSyntax extends BlockSyntax {
     }
 
     var content = BlockParser(lines, parser.document).parseLines();
-    var footnote = Element('small', [
-      Element('sup', [
-        Element.text('a', number)
-          ..attributes['href'] = '#${FootnoteLinkSyntax.linkIdFor(number)}'
-      ]),
-      ...content
+    var smallContent = <Node>[];
+    var first = true;
+    var annotation = Element('sup', [
+      Element.text('a', number)
+        ..attributes['href'] = '#${FootnoteLinkSyntax.linkIdFor(number)}'
+        ..attributes['id'] = FootnoteLinkSyntax.idFor(number)
     ]);
 
-    footnote.attributes['id'] = FootnoteLinkSyntax.idFor(number);
-    return footnote;
+    // Make each content node small
+    for (var node in content) {
+      if (node is! Element) {
+        // not sure about this
+        throw ArgumentError('expected Element node but got $node');
+      }
+
+      var el = node as Element;
+      var smalled = Element(el.tag, [
+        Element('small', [
+          if (first) ...[annotation, Text('&nbsp;')],
+          ...el.children
+        ])
+      ]);
+      smallContent.add(smalled);
+
+      if (first) {
+        first = false;
+      }
+    }
+
+    return FootnoteNodes(smallContent);
+  }
+}
+
+class FootnoteNodes extends Element {
+  final List<Node> _children;
+
+  FootnoteNodes(this._children) : super(null, _children);
+
+  @override
+  void accept(NodeVisitor visitor) {
+    _children.forEach((child) => child.accept(visitor));
   }
 }

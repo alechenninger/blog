@@ -120,7 +120,7 @@ Java:
 
 Paragraph.
       
-^[1]: A very good test.''',
+^1: A very good test.''',
           inlineSyntaxes: [FootnoteLinkSyntax()],
           blockSyntaxes: [FootnoteSyntax()]);
 
@@ -132,8 +132,8 @@ Paragraph.
 
               <p>Paragraph.</p>
 
-              <small id="note-1"><p><sup><a href="note-1-link">1</a></sup> A 
-              very good test.</p></small>'''));
+              <p><small><sup><a href="#note-1-link" id="note-1">1</a></sup>
+              &nbsp;A very good test.</small></p>'''));
     });
 
     test('footnotes may be multiple lines and paragraphs', () {
@@ -141,7 +141,7 @@ Paragraph.
 
 Paragraph.
       
-^[1]: A very good test,
+^1: A very good test,
 since it tests more.
 ^
 ^ I quite like it.''',
@@ -156,9 +156,40 @@ since it tests more.
               
               <p>Paragraph.</p>
               
-              <small id="note-1"><p><sup><a href="note-1-link">1</a></sup> A 
-              very good test, since it tests more.</p><p>I quite like it.
-              </p></small>'''));
+              <p><small><sup><a href="#note-1-link" id="note-1">1</a></sup>
+              &nbsp;A very good test, since it tests more.</small></p>
+              <p><small>I quite like it.</small></p>'''));
+    });
+
+    test('footnotes may follow other footnotes', () {
+      var html = markdownToHtml(r'''This^[1] is a test^[2].
+
+Paragraph.
+      
+^1: A very good test,
+since it tests more.
+^
+^ I quite like it.
+
+^2: Another footnote. Cool!''',
+          inlineSyntaxes: [FootnoteLinkSyntax()],
+          blockSyntaxes: [FootnoteSyntax()]);
+
+      expect(
+          html,
+          sameHtmlAs(
+              r'''<p>This<sup id="note-1-link"><a href="#note-1">1</a></sup> 
+              is a test
+              <sup id="note-2-link"><a href="#note-2">2</a></sup>.</p>
+              
+              <p>Paragraph.</p>
+              
+              <p><small><sup><a href="#note-1-link" id="note-1">1</a></sup>
+              &nbsp;A very good test, since it tests more.</small></p>
+              <p><small>I quite like it.</small></p>
+              
+              <p><small><sup><a href="#note-2-link" id="note-2">2</a></sup>
+              &nbsp;Another footnote. Cool!</small></p>'''));
     });
   });
 }
