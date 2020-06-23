@@ -124,4 +124,68 @@ class DefinitionListSyntax extends BlockSyntax {
   }
 }
 
-class FootnoteSyntax {}
+class FootnoteLinkSyntax extends InlineSyntax {
+  FootnoteLinkSyntax() : super(r'\^\[(\d+)\]');
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    var note = match[1];
+    var link = Element('sup',
+        [Element.text('a', note)..attributes['href'] = '#${idFor(note)}']);
+    link.attributes['id'] = 'note-$note-link';
+    parser.addNode(link);
+    return true;
+  }
+
+  static String idFor(note) => 'note-$note';
+  static String linkIdFor(note) => 'note-$note-link';
+}
+
+class FootnoteSyntax extends BlockSyntax {
+  static final _pattern = RegExp('^\^(\d+):[ ]*(.*)');
+  static final _continuationPattern = RegExp(r'^\^[ ]*(.*)');
+
+  @override
+  RegExp get pattern => _pattern;
+
+  @override
+  Node parse(BlockParser parser) {
+    var start = pattern.firstMatch(parser.current);
+    if (start == null) throw ArgumentError();
+    var number = start[1];
+
+    var lines = [];
+    lines.add(start[2]);
+
+    parser.advance();
+
+    while (!parser.isDone) {
+      var match = _continuationPattern.firstMatch(parser.current);
+      if (match != null) {
+        lines.add(match[1]);
+        parser.advance();
+        continue;
+      }
+
+      if (parser.blockSyntaxes.firstWhere((s) => s.canParse(parser))
+          is ParagraphSyntax) {
+        lines.add(parser.current);
+        parser.advance();
+      } else {
+        break;
+      }
+    }
+
+    var content = BlockParser(lines, parser.document).parseLines();
+    var footnote = Element('small', [
+      Element('sup', [
+        Element.text('a', number)
+          ..attributes['href'] = '#${FootnoteLinkSyntax.linkIdFor(number)}'
+      ]),
+      ...content
+    ]);
+
+    footnote.attributes['id'] = FootnoteLinkSyntax.idFor(number);
+    return footnote;
+  }
+}

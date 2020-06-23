@@ -113,4 +113,52 @@ Java:
               r'</dd></dl>'));
     });
   });
+
+  group('FootnoteSyntax', () {
+    test('creates footnotes and links', () {
+      var html = markdownToHtml(r'''This is a test^[1].
+
+Paragraph.
+      
+^[1]: A very good test.''',
+          inlineSyntaxes: [FootnoteLinkSyntax()],
+          blockSyntaxes: [FootnoteSyntax()]);
+
+      expect(
+          html,
+          sameHtmlAs(
+              r'''<p>This is a test<sup id="note-1-link"><a href="#note-1">1
+              </a></sup>.</p>
+
+              <p>Paragraph.</p>
+
+              <small id="note-1"><p><sup><a href="note-1-link">1</a></sup> A 
+              very good test.</p></small>'''));
+    });
+
+    test('footnotes may be multiple lines and paragraphs', () {
+      var html = markdownToHtml(r'''This is a test^[1].
+
+Paragraph.
+      
+^[1]: A very good test,
+since it tests more.
+^
+^ I quite like it.''',
+          inlineSyntaxes: [FootnoteLinkSyntax()],
+          blockSyntaxes: [FootnoteSyntax()]);
+
+      expect(
+          html,
+          sameHtmlAs(
+              r'''<p>This is a test<sup id="note-1-link"><a href="#note-1">1
+              </a></sup>.</p>
+              
+              <p>Paragraph.</p>
+              
+              <small id="note-1"><p><sup><a href="note-1-link">1</a></sup> A 
+              very good test, since it tests more.</p><p>I quite like it.
+              </p></small>'''));
+    });
+  });
 }

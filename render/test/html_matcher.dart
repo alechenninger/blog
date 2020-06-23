@@ -6,9 +6,9 @@ Matcher sameHtmlAs(String expected) {
 }
 
 class _HtmlMatcher extends Matcher {
-  final XmlDocument _expected;
+  final XmlDocumentFragment _expected;
 
-  _HtmlMatcher(String html) : _expected = XmlDocument.parse(html);
+  _HtmlMatcher(String html) : _expected = XmlDocumentFragment.parse(html);
 
   @override
   Description describe(Description description) {
@@ -29,10 +29,10 @@ class _HtmlMatcher extends Matcher {
   }
 
   String _canonicalizeHtml(String html) =>
-      XmlDocument.parse(html).toCanonicalString();
+      XmlDocumentFragment.parse(html).toCanonicalString();
 }
 
-extension _Canonicalize on XmlDocument {
+extension _Canonicalize on XmlHasWriter {
   String toCanonicalString() =>
       toXmlString(pretty: true, preserveWhitespace: (_) => false);
 }
