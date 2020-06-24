@@ -24,7 +24,7 @@ void main(List<String> arguments) async {
   }
 
   progress.finish();
-  progress = logger.progress('Rendering posts to html');
+  progress = logger.progress('Rendering markdown posts to html');
   var built = [];
 
   await for (var entity in posts.list()) {
@@ -32,11 +32,19 @@ void main(List<String> arguments) async {
     var post = entity as File;
     var name = basenameWithoutExtension(post.path);
     var contents = await post.readAsString();
-    var html = blogMarkdownToHtml(contents, extensionSet: blogExtensionSet);
+
+    var html = isMarkdown(post)
+        ? blogMarkdownToHtml(contents, extensionSet: blogExtensionSet)
+        : contents;
+
     var builtPost = out.childFile('$name.html');
+
     await builtPost.writeAsString(html);
+
     built.add(builtPost.path);
   }
 
   progress.finish(message: '${built}');
 }
+
+bool isMarkdown(File file) => ['md', 'markdown'].contains(extension(file.path));
