@@ -161,6 +161,31 @@ since it tests more.
               <p><small>I quite like it.</small></p>'''));
     });
 
+    test('footnotes span empty newlines', () {
+      var html = markdownToHtml(r'''This is a test^[1].
+
+Paragraph.
+      
+^1: A very good test,
+since it tests more.
+
+^ I quite like it.''',
+          inlineSyntaxes: [FootnoteLinkSyntax()],
+          blockSyntaxes: [FootnoteSyntax()]);
+
+      expect(
+          html,
+          sameHtmlAs(
+              r'''<p>This is a test<sup id="note-1-link"><a href="#note-1">1
+              </a></sup>.</p>
+              
+              <p>Paragraph.</p>
+              
+              <p><small><sup><a href="#note-1-link" id="note-1">1</a></sup>
+              &nbsp;A very good test, since it tests more.</small></p>
+              <p><small>I quite like it.</small></p>'''));
+    });
+
     test('footnotes may follow other footnotes', () {
       var html = markdownToHtml(r'''This^[1] is a test^[2].
 

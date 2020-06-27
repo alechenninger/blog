@@ -176,6 +176,8 @@ class FootnoteSyntax extends BlockSyntax {
     parser.advance();
 
     while (!parser.isDone) {
+      if (pattern.hasMatch(parser.current)) break;
+
       var match = _continuationPattern.firstMatch(parser.current);
       if (match != null) {
         lines.add(match[1]);
@@ -183,7 +185,8 @@ class FootnoteSyntax extends BlockSyntax {
         continue;
       }
 
-      if (parser.blockSyntaxes.firstWhere((s) => s.canParse(parser))
+      if (parser.current.trim().isEmpty ||
+          parser.blockSyntaxes.firstWhere((s) => s.canParse(parser))
           is ParagraphSyntax) {
         lines.add(parser.current);
         parser.advance();
