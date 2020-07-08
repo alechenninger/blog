@@ -1,19 +1,21 @@
 import 'dart:convert';
 
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart';
 import 'package:markdown/markdown.dart';
 
 export 'src/markdown_extensions.dart';
 
 /// From markdownToHtml, but recognizes more block tags.
 String blogMarkdownToHtml(
-    String markdown, {
-      Iterable<BlockSyntax> blockSyntaxes,
-      Iterable<InlineSyntax> inlineSyntaxes,
-      ExtensionSet extensionSet,
-      Resolver linkResolver,
-      Resolver imageLinkResolver,
-      bool inlineOnly = false,
-    }) {
+  String markdown, {
+  Iterable<BlockSyntax> blockSyntaxes,
+  Iterable<InlineSyntax> inlineSyntaxes,
+  ExtensionSet extensionSet,
+  Resolver linkResolver,
+  Resolver imageLinkResolver,
+  bool inlineOnly = false,
+}) {
   var document = Document(
     blockSyntaxes: blockSyntaxes,
     inlineSyntaxes: inlineSyntaxes,
@@ -27,7 +29,28 @@ String blogMarkdownToHtml(
   // Replace windows line endings with unix line endings, and split.
   var lines = markdown.replaceAll('\r\n', '\n').split('\n');
 
-  return HtmlRendererWithMoreBlocks().render(document.parseLines(lines)) + '\n';
+  var rendered =
+      _HtmlRendererWithMoreBlocks().render(document.parseLines(lines)) + '\n';
+
+  return _postProcessHtml(rendered);
+}
+
+String _postProcessHtml(String rendered) {
+  var html = parseFragment(rendered);
+
+  _linksTargetBlankWindow(html);
+
+  return html.outerHtml;
+}
+
+void _linksTargetBlankWindow(dom.DocumentFragment html) {
+  for (var anchor in html.querySelectorAll('a')) {
+    var href = anchor.attributes['href'];
+    if (href.startsWith('https://') || href.startsWith('http://')) {
+      anchor.attributes['target'] = '_blank';
+      anchor.attributes['rel'] = 'noreferrer noopener';
+    }
+  }
 }
 
 const _blockTags = [
@@ -48,14 +71,14 @@ const _blockTags = [
 ];
 
 /// From HtmlRenderer, but recognizes more block tags.
-class HtmlRendererWithMoreBlocks implements NodeVisitor {
+class _HtmlRendererWithMoreBlocks implements NodeVisitor {
   StringBuffer buffer;
   Set<String> uniqueIds;
 
   final _elementStack = <Element>[];
   String _lastVisitedTag;
 
-  HtmlRendererWithMoreBlocks();
+  _HtmlRendererWithMoreBlocks();
 
   String render(List<Node> nodes) {
     buffer = StringBuffer();
