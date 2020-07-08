@@ -3,3 +3,4 @@
 *.iml
 pubspec.lock
 out/
+client.json

@@ -15,8 +15,10 @@ final blogExtensionSet = ExtensionSet([
 // Adapted from BlockquoteSyntax
 class AsideBlockSyntax extends BlockSyntax {
   /// Matches // with a space and some optional text, or just a lone pair of /.
-  /// If a line starts with // and immediately some text (e.g. /foo), it will not
+  /// If a line starts with // and immediately some text (e.g. //foo), it will not
   /// be considered an aside.
+  // TODO: consider using /// to start aside, and // as a new paragraph in same
+  //  aside.
   static final _pattern = RegExp(r'^[ ]{0,3}//( (.*)|)$');
 
   @override

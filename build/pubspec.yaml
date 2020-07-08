@@ -14,6 +14,9 @@ dependencies:
   cli_util: ^0.2.0
   args: ^1.6.0
   file: ^5.2.0
+  googleapis: ^0.55.0
+  googleapis_auth: ^0.2.12
+  html: ^0.14.0
 
 dev_dependencies:
   pedantic: ^1.9.0
