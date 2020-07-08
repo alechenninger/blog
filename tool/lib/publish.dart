@@ -8,7 +8,6 @@ export 'package:http/http.dart' show Client;
 const _scopes = [BloggerApi.BloggerScope];
 const blogId = '2329797559500355970';
 final _myBlog = PostBlog()..id = blogId;
-final _me = PostAuthor()..id = '00830222565415954531';
 
 class PostResult {
   final String id;
@@ -53,7 +52,6 @@ class Blog {
       request = _toApiPost(post);
     } else {
       request = Post()
-        ..author = _me
         ..blog = _myBlog
         ..kind = _Kinds.post
         ..title = 'untitled';
@@ -86,7 +84,6 @@ class Blog {
   }
 
   Post _toApiPost(RenderedPost post) => Post()
-    ..author = _me
     ..blog = _myBlog
     ..kind = _Kinds.post
     ..content = post.htmlContent

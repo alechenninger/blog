@@ -1,5 +1,5 @@
 import 'package:markdown/markdown.dart';
-import 'package:build_blog/src/markdown_extensions.dart';
+import 'package:blogtool/src/markdown_extensions.dart';
 import 'package:test/test.dart';
 
 import 'html_matcher.dart';

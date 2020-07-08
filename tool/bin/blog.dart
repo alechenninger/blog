@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
-import 'package:build_blog/build.dart';
-import 'package:build_blog/publish.dart';
+import 'package:blogtool/build.dart';
+import 'package:blogtool/publish.dart';
 import 'package:cli_util/cli_logging.dart';
 import 'package:file/local.dart';
 import 'package:file/src/interface/directory.dart';
