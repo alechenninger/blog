@@ -238,7 +238,8 @@ Future<Blog> loadBlog() async {
   };
   clientInfo['refreshToken'] = credentials.refreshToken;
 
-  await file.writeAsString(jsonEncode(clientInfo), flush: true);
+  var encoder = JsonEncoder.withIndent('  ');
+  await file.writeAsString(encoder.convert(clientInfo), flush: true);
 
   return Blog.withClient(httpClient);
 }
