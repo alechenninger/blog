@@ -4,27 +4,16 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart';
 import 'package:markdown/markdown.dart';
 
+import 'src/markdown_extensions.dart';
+
 export 'src/markdown_extensions.dart';
 
-/// From markdownToHtml, but recognizes more block tags.
-String blogMarkdownToHtml(
-  String markdown, {
-  Iterable<BlockSyntax> blockSyntaxes,
-  Iterable<InlineSyntax> inlineSyntaxes,
-  ExtensionSet extensionSet,
-  Resolver linkResolver,
-  Resolver imageLinkResolver,
-  bool inlineOnly = false,
-}) {
+/// From markdownToHtml, but recognizes more block tags, and other blog-specific
+/// extensions.
+String blogMarkdownToHtml(String markdown) {
   var document = Document(
-    blockSyntaxes: blockSyntaxes,
-    inlineSyntaxes: inlineSyntaxes,
-    extensionSet: extensionSet,
-    linkResolver: linkResolver,
-    imageLinkResolver: imageLinkResolver,
+    extensionSet: blogExtensionSet,
   );
-
-  if (inlineOnly) return renderToHtml(document.parseInline(markdown));
 
   // Replace windows line endings with unix line endings, and split.
   var lines = markdown.replaceAll('\r\n', '\n').split('\n');
@@ -38,12 +27,12 @@ String blogMarkdownToHtml(
 String _postProcessHtml(String rendered) {
   var html = parseFragment(rendered);
 
-  _linksTargetBlankWindow(html);
+  _openExternalLinksInNewTab(html);
 
   return html.outerHtml;
 }
 
-void _linksTargetBlankWindow(dom.DocumentFragment html) {
+void _openExternalLinksInNewTab(dom.DocumentFragment html) {
   for (var anchor in html.querySelectorAll('a')) {
     var href = anchor.attributes['href'];
     if (href.startsWith('https://') || href.startsWith('http://')) {

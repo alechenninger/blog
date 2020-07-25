@@ -33,7 +33,14 @@ void main() {
       var html = markdownToHtml('// This test should pass.',
           blockSyntaxes: [AsideBlockSyntax()]);
 
-      expect(html, sameHtmlAs(r'<aside><p>This test should pass.</p></aside>'));
+      expect(html.trim(), equals(r'<aside>This test should pass.</aside>'));
+    });
+
+    test('does not require space after //', () {
+      var html = markdownToHtml('//This test should pass.',
+          blockSyntaxes: [AsideBlockSyntax()]);
+
+      expect(html.trim(), equals(r'<aside>This test should pass.</aside>'));
     });
 
     test('parses lines starting with // as asides', () {
@@ -43,8 +50,8 @@ void main() {
 
       expect(
           html,
-          sameHtmlAs(r'<aside><p>This is an aside. '
-              r'And another line in the same aside.</p></aside>'));
+          sameHtmlAs(r'<aside>This is an aside. '
+              r'And another line in the same aside.</aside>'));
     });
 
     test('parses other markup inside aside', () {
@@ -57,7 +64,7 @@ void main() {
 
       expect(
           html,
-          sameHtmlAs(r'<aside><p><strong>This</strong> is an aside.</p>'
+          sameHtmlAs(r'<aside><strong>This</strong> is an aside.'
               r'<ol><li>With an</li><li>ordered list</li></ol>'
               r"<p>Cool, isn't it?</p></aside>"));
     });

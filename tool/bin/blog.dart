@@ -13,6 +13,7 @@ import 'package:googleapis/blogger/v3.dart' show BloggerApi;
 import 'package:googleapis_auth/auth.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:path/path.dart';
+import 'package:pedantic/pedantic.dart';
 
 var fs = LocalFileSystem();
 var posts = fs.directory('posts');
@@ -23,7 +24,8 @@ void main(List<String> arguments) async {
   var runner = CommandRunner('build_blog', 'builds posts under posts/')
     ..addCommand(Build())
     ..addCommand(Watch())
-    ..addCommand(Preview());
+    ..addCommand(Preview())
+    ..addCommand(Lookup());
 
   await runner.run(arguments);
 
@@ -94,8 +96,6 @@ class Watch extends Command<void> {
 class Preview extends Command<void> {
   Blog _blog;
 
-  Preview();
-
   @override
   String get description => 'uploads post as draft and provides preview url';
 
@@ -106,22 +106,37 @@ class Preview extends Command<void> {
   FutureOr<void> run() async {
     _blog = await loadBlog();
 
-    var progress = logger.progress('Clearing output directory');
-
-    var out = await prepareOut(fs, clear: true);
-
-    progress.finish();
-    progress = logger.progress('Rendering markdown posts to html');
-    var built = [];
+    if (argResults.rest.isEmpty) {
+      throw ArgumentError('Must provide path to post as argument');
+    }
 
     var post = fs.file(argResults.rest[0]);
-    var builtPost = await render(post, out);
+    var out = await prepareOut(fs);
 
-    built.add(builtPost.path);
+    var rendered = await render(post, out);
+    await _uploadDraft(rendered);
 
-    progress.finish(message: '${built}');
+    var progress = logger.progress('Watching $post for changes');
 
-    progress = logger.progress('Uploading draft');
+    Future<void> handleModify(FileSystemModifyEvent event) async {
+      if (!event.contentChanged) return;
+      progress.finish(message: '${event.path} changed');
+      var rendered = await render(post, out);
+      logger.stderr('${rendered} updated');
+      await _uploadDraft(rendered);
+    }
+
+    await for (var event in post.watch()) {
+      if (event is FileSystemModifyEvent) {
+        await handleModify(event);
+      }
+
+      progress = logger.progress('Watching $post for changes');
+    }
+  }
+
+  Future _uploadDraft(BuiltPost builtPost) async {
+    var progress = logger.progress('Uploading draft');
 
     var rendered = RenderedPost(builtPost.htmlContent);
 
@@ -136,9 +151,9 @@ class Preview extends Command<void> {
 
       progress.finish(message: 'Done!', showTiming: true);
 
-      await post.writeAsString('''<meta name="id" content="${result.id}">
-${builtPost.originalContent}''',
-          flush: true);
+      await builtPost.originalFile
+          .writeAsString('''<meta name="id" content="${result.id}">
+${builtPost.originalContent}''', flush: true);
 
       logger.stdout('Preview your post here: ${result.previewUrl}');
     }
@@ -146,10 +161,6 @@ ${builtPost.originalContent}''',
 }
 
 class Publish extends Command<void> {
-  final Blog _blog;
-
-  Publish(this._blog);
-
   @override
   String get description => 'publishes post and provides published url';
 
@@ -157,7 +168,26 @@ class Publish extends Command<void> {
   String get name => 'publish';
 
   @override
-  FutureOr<void> run() async {}
+  FutureOr<void> run() async {
+    var blog = await loadBlog();
+  }
+}
+
+class Lookup extends Command<void> {
+  @override
+  String get description => 'looks up JSON for a post by ID';
+
+  @override
+  String get name => 'lookup';
+
+  @override
+  FutureOr<void> run() async {
+    var blog = await loadBlog();
+    var id = argResults.rest[0];
+    var post = await blog.lookupPost(id);
+    var encoder = JsonEncoder.withIndent('  ');
+    logger.stdout(encoder.convert(post.toJson()));
+  }
 }
 
 bool isMarkdown(File file) =>
@@ -181,24 +211,28 @@ Future<BuiltPost> render(File post, Directory out) async {
   var name = basenameWithoutExtension(post.path);
   var contents = await post.readAsString();
 
-  var html = isMarkdown(post)
-      ? blogMarkdownToHtml(contents, extensionSet: blogExtensionSet)
-      : contents;
+  var html = isMarkdown(post) ? blogMarkdownToHtml(contents) : contents;
 
   var builtPost = out.childFile('$name.html');
 
   await builtPost.writeAsString(html, flush: true);
 
-  return BuiltPost(builtPost, contents, html);
+  return BuiltPost(post, builtPost, contents, html);
 }
 
+// TODO: BuiltPost and RenderedPost should be combined
 class BuiltPost {
-  final File file;
+  final File originalFile;
+  final File htmlFile;
   final String originalContent;
   final String htmlContent;
-  String get path => file.path;
+  String get originalPath => originalFile.path;
+  @deprecated
+  String get path => htmlPath;
+  String get htmlPath => htmlFile.path;
 
-  const BuiltPost(this.file, this.originalContent, this.htmlContent);
+  const BuiltPost(
+      this.originalFile, this.htmlFile, this.originalContent, this.htmlContent);
 }
 
 Future<Blog> loadBlog() async {

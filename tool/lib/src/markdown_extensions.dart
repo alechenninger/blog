@@ -19,7 +19,7 @@ class AsideBlockSyntax extends BlockSyntax {
   /// be considered an aside.
   // TODO: consider using /// to start aside, and // as a new paragraph in same
   //  aside.
-  static final _pattern = RegExp(r'^[ ]{0,3}//( (.*)|)$');
+  static final _pattern = RegExp(r'^[ ]{0,3}// ?((.*)|)$');
 
   @override
   RegExp get pattern => _pattern;
@@ -60,6 +60,16 @@ class AsideBlockSyntax extends BlockSyntax {
 
     // Recursively parse the contents of the aside.
     var children = BlockParser(childLines, parser.document).parseLines();
+
+    if (children.isNotEmpty) {
+      if (children[0] is Element) {
+        var firstEl = children[0] as Element;
+        if (firstEl.tag.toLowerCase() == 'p') {
+          children.removeAt(0);
+          children.insertAll(0, firstEl.children);
+        }
+      }
+    }
 
     return Element('aside', children);
   }

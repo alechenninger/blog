@@ -16,6 +16,8 @@ class PostResult {
       'https://draft.blogger.com/blog/post/edit/preview/$blogId/$id';
 
   const PostResult(this.id, this.url);
+
+  PostResult.fromPost(Post post) : this(post.id, post.url);
 }
 
 class Blog {
@@ -23,12 +25,7 @@ class Blog {
 
   Blog(this._api);
 
-  Blog.withClient(Client client): this(BloggerApi(client));
-
-  static Future<Blog> production(ServiceAccountCredentials credentials) async {
-    var client = await clientViaServiceAccount(credentials, _scopes);
-    return Blog(BloggerApi(client));
-  }
+  Blog.withClient(Client client) : this(BloggerApi(client));
 
   /// Returns id of new post, in draft state.
   Future<PostResult> startNewPost({RenderedPost post}) async {
@@ -62,6 +59,28 @@ class Blog {
     return PostResult(response.id, response.url);
   }
 
+  // TODO: doesn't work; I don't think it returns drafts.
+  //  Will have to use list posts?
+  Future<PostResult> idForPostTitled(String title) async {
+    var response = await _api.posts.search(blogId, '"$title"');
+    var posts = response.items;
+
+    if (posts.length > 1) {
+      throw ArgumentError.value(
+          title,
+          'title',
+          'resolved to more than one post; '
+              'expected title to match single post, '
+              'but got ${posts.map((e) => '"${e.title}"').toList()}');
+    }
+
+    if (posts.isEmpty) {
+      return null;
+    }
+
+    return PostResult.fromPost(posts[0]);
+  }
+
   Future<PostResult> updatePost(RenderedPost post) async {
     if (post.id == null) {
       throw ArgumentError.notNull('post.id');
@@ -83,6 +102,10 @@ class Blog {
     return PostResult(response.id, response.url);
   }
 
+  Future<Post> lookupPost(String id) async {
+    return await _api.posts.get(blogId, id, view: 'ADMIN');
+  }
+
   Post _toApiPost(RenderedPost post) => Post()
     ..blog = _myBlog
     ..kind = _Kinds.post
@@ -101,6 +124,8 @@ class RenderedPost {
   String get id => _id;
   final String _htmlContent;
   String get htmlContent => _htmlContent;
+  String _description;
+  String get description => _description;
   bool get isNewPost => _id == null;
 
   RenderedPost(this._htmlContent) {
@@ -116,6 +141,9 @@ class RenderedPost {
           break;
         case 'id':
           _id = content;
+          break;
+        case 'description':
+          _description = content;
       }
     }
   }
