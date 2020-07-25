@@ -8,6 +8,7 @@ final blogExtensionSet = ExtensionSet([
   ...ExtensionSet.gitHubWeb.blockSyntaxes
 ], [
   VariableSyntax(),
+  DefinitionSyntax(),
   FootnoteLinkSyntax(),
   ...ExtensionSet.gitHubWeb.inlineSyntaxes
 ]);
@@ -85,6 +86,18 @@ class VariableSyntax extends InlineSyntax {
     return true;
   }
 }
+
+class DefinitionSyntax extends InlineSyntax {
+  DefinitionSyntax() : super(r'{{([\w ]+)}}', startCharacter: $open_brace);
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    var term = match[1];
+    parser.addNode(Element.text('dfn', term));
+    return true;
+  }
+}
+
 
 class DefinitionListSyntax extends BlockSyntax {
   /// Matches a line that ends with colon.
