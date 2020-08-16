@@ -22,6 +22,7 @@ var closeEm = [];
 
 void main(List<String> arguments) async {
   var runner = CommandRunner('build_blog', 'builds posts under posts/')
+    ..addCommand(StartPost())
     ..addCommand(Build())
     ..addCommand(Watch())
     ..addCommand(Preview())
@@ -30,6 +31,41 @@ void main(List<String> arguments) async {
   await runner.run(arguments);
 
   closeEm.reversed.forEach((it) => it.close());
+}
+
+class StartPost extends Command<void> {
+  @override
+  String get description =>
+      'starts a new post with empty metadata tags for editing';
+
+  @override
+  String get name => 'start';
+
+  @override
+  FutureOr<void> run() async {
+    if (argResults.rest.isEmpty) {
+      throw ArgumentError('must pass post filename');
+    }
+
+    var postFileName = argResults.rest[0];
+
+    if (RegExp(r'.*[\s-/\\=+()*&^%$#@!]+.*').hasMatch(postFileName)) {
+      throw ArgumentError.value(postFileName, 'post name',
+          'must only contain characters numbers and _');
+    }
+
+    var post = fs.directory('posts').childFile(postFileName);
+    if (await post.exists()) {
+      throw ArgumentError.value(
+          postFileName, 'post name', 'post already exists with that name');
+    }
+    await post.writeAsString('''<meta name="labels" content="">
+<meta name="title" content="">
+<meta name="description" content="">
+
+''');
+    logger.stdout('${post.path} prepared for editing');
+  }
 }
 
 class Build extends Command<void> {
