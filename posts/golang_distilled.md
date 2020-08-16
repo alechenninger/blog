@@ -158,7 +158,7 @@ func ReadFull(r Reader, buf []byte) (n int, err error) {
 
 ### Collections
 
-#### Arrays and slices (lists)
+#### Arrays and slices
 
 
 
@@ -194,7 +194,6 @@ func ReadFull(r Reader, buf []byte) (n int, err error) {
 * Casts
 
 ### Organization: modules, packages, visibility, and repository layout
-
 
 
 
