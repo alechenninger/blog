@@ -8,7 +8,7 @@ final blogExtensionSet = ExtensionSet([
   ...ExtensionSet.gitHubWeb.blockSyntaxes
 ], [
   VariableSyntax(),
-  DefinitionSyntax(),
+  TechnicalTermSyntax(),
   FootnoteLinkSyntax(),
   ...ExtensionSet.gitHubWeb.inlineSyntaxes
 ]);
@@ -87,13 +87,13 @@ class VariableSyntax extends InlineSyntax {
   }
 }
 
-class DefinitionSyntax extends InlineSyntax {
-  DefinitionSyntax() : super(r'{{([\w ]+)}}', startCharacter: $open_brace);
+class TechnicalTermSyntax extends InlineSyntax {
+  TechnicalTermSyntax() : super(r'{{([\w ]+)}}', startCharacter: $open_brace);
 
   @override
   bool onMatch(InlineParser parser, Match match) {
     var term = match[1];
-    parser.addNode(Element.text('dfn', term));
+    parser.addNode(Element.text('i', term));
     return true;
   }
 }
