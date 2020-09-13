@@ -32,6 +32,7 @@
           logic inside stubs... the mockito implementations quickly escalate past sanity compared
           to the obvious class.
     * overuse
+        * https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
         * mocking is so easy its often used when entirely unnecessary. for example, if we have a 
         class that depends on another class, we may mock that dependency reflexively. but what if
         there is business logic in that dependency? now we have to make sure our mock object stays
