@@ -47,7 +47,7 @@
             correctly, so we don't need to focus on its contract, only the contract and edge cases
             of our class under test. the other code has its own tests! but that doesnt mean we have
             to for some reason _avoid_ using any other code. not only is there no reason to, its both
-            impossible and actively harmful. all code uses other code. you don't try to make 
+            impossible and actively harmful. all code uses other code. you don't try to mock 
             ArrayList, do you? similarly, if you replace that code, you will simply be replacing it
             with... more code. code you will write quickly, and that won't have its own tests, and
             so we have no idea if it actually supports the contract of the collaborator.
@@ -66,6 +66,8 @@
             * Even in some examples of interaction testing here could be modeled as state changes.
             For example, for checking sent mail, a stub or fake could be implemented which tracks
             the state of sent mail. Assertions can check that state does not include duplicates.
+        * testing of–and thus, coupling to–implementation detail instead of what matters.
+            * https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
     * does not encourage testable code
         * you can mock or spy classes as well as interfaces. while mockito's documentation is quite
         clear that mocking classes is a bad idea, it seems many developers never read it.
