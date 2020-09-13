@@ -52,6 +52,8 @@
             ArrayList, do you? similarly, if you replace that code, you will simply be replacing it
             with... more code. code you will write quickly, and that won't have its own tests, and
             so we have no idea if it actually supports the contract of the collaborator.
+        * mocking complex protocols like HTTP interactions is frought with error
+            * https://testing.googleblog.com/2018/11/testing-on-toilet-exercise-service-call.html
     * lack of reuse
         * mocks need to be restubbed often. 
         * if you try to extract them out, you end up with a barbaric meta-language of defining a 
