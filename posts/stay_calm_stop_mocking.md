@@ -1,25 +1,25 @@
 <meta name="id" content="5059786785061561365">
 <meta name="labels" content="testing,object oriented programming">
-<meta name="title" content="Mockito Considered Harmful (or, How I Learned To Stay Calm and Stop Mocking)">
+<meta name="title" content="Keep Calm and Stop Mocking">
 <meta name="description" content="">
 
 Mockito (with the help of its dependencies) is an amazing feat of engineering: a super readable, 
 runtime meta-programming DSL that is simultaneously implemented in the very type system that it
-bends and breaks. Mockito has helped 1000s of developers test their code. It is among the most 
-popular Java libraries ever.
+bends and breaks. Mockito has helped 1000s of developers test their code. It is among the [most 
+popular Java libraries ever](https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2A-AyhpPBnOc6Ki4kzs3YIJToOADeGjCrrPCo).
 
 What if this isn't actually a good thing?
 
-Mockito is too good at what it does. Like habitual scrolling through endless social media and news 
-feeds, we have found ourselves using it all the time to our own detriment.
+Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
+media and news feeds, we have found ourselves using it all the time to our own detriment.
 
-What happened? What is Mockito doing that is so bad for us?
+What happened? What could Mockito possibly be doing that is so bad for us?
 
-## What does Mockito actually do?
+## Mocking 101
 
-Mockito is a mocking library, but let's call that what it is: meta-programming. Mocking is 
-using its own types, to implement new types at runtime, in a language where you can natively 
-implement types at compile-time. These two examples are basically equivalent:
+Mockito is a mocking library, but let's respect that for what it is: meta-programming. Mocking is 
+using a library's own types, to implement new types, at runtime, in a language where you can 
+natively implement types at compile-time. These two examples are basically equivalent:
 
 ```java
 Foo stubFoo = new Foo() {
@@ -34,18 +34,69 @@ Foo mockFoo = mock(Foo.class);
 when(mockFoo.bar()).thenReturn("bar");
 ```
 
-Why would we invest so much time an energy in complex reflection and low-level bytecode acrobatics 
-to write a class when we can, you know, simply _write a class_?
+Why bother using complex reflection and low-level bytecode acrobatics to write a class when we can, 
+you know, simply _write a class_ using simple, tool-supported, first-class language features?
 
 In the above example, aside from astonishingly greater implementation complexity, the Mockito 
-version actually requires _more_ characters. 
+version actually requires _more_ characters (a lot more if you rewrote the stub as a lambda).
 
-Of course, the defining feature of a mocking library is that that implementation isn't all there is 
-to it: mocks _record_ their method calls so you may assert on not just the state of your program, 
-but the _means_ of your program. That is, the state of _interactions_ between objects, like what 
-methods were called, how many times, with what arguments, and in what order.
+## Why we mock
+
+Of course, I'm mostly lying. The defining feature of mocking libraries is that those implementations
+_aren't_ totally equivalent: mocks _record_ their method calls so you may assert on not just the 
+state of your program, but the _means_ of your program. That is, the state of _interactions_ between
+objects, like what methods were called, how many times, with what arguments, and in what order.
+Much has been written about verifying state vs interactions **TODO–links, summary.**
+
+Secondly, this magical runtime-type-implementing DSL has some features that the Java language
+does not. You can simply not implement some methods, and instead of a compilation error, you get a 
+default, no-op implementation. It also lets you accomplish scandalous mischief like reimplementing 
+`final` classes or enums or static methods. I broadly classify these as convenience features, 
+because they save you time by "saving" you from writing a whole class that implements some 
+interface, or refactoring your code so that it may be testable by language-supported means.
+
+## A Whole Class
+
+* alternative to mock is often a fake
+* a fake is a demonstration of how a type should behave – it is documentation for our team
+* reuse in other tests
+    * verify captures contract
+    * what about when you want to reuse knowledge of that contract?
+    * write methods that create mocks again and again the same way, or verify the same way
+    * compare this to writing a class that captures the contract
+* codify domain knowledge in set up
+
+## Hermetic servers
+
+* fakes can be used outside of src/test for variety of valuable use cases
+* help yourself test / experience a service locally
+* help other teams test
+* load test a service isolating certain dependencies
+
+## The futility of isolation
+
+We humans are innately obsessed with organizing our thoughts and concepts with ontologies and 
+taxonomies and hierarchies. [Sorting just makes us feel like we're doing something *good* and 
+*productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
+cozy inside just thinking about it.
+
+Are you thinking about the deep, artful hierarchy of subpackages in you Java code now, hmmm?
+
+"Unit" tests, in the ontology of testing, isolate a unit of code to ensure it functions correctly.
+We contrast this with "integration" tests, which test these units together, without isolation. We 
+heard writing lots of unit tests is good, because of something about a pyramid and an ice cream 
+cone, so we have to make sure most of our tests only use isolated units, right?
+
+"Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
+devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
+hyperfocused on isolating a class or method under test from all others.
+
+We must be doing this for good reason. Except, we aren't. There is no reason to generally isolate
+a class or method from other classes or methods.
 
 ## Asserting on program state vs object interactions
+
+> This section is probably unnecessary / not very interesting
 
 First, an absurd question:
 
@@ -54,8 +105,9 @@ What is the point of our programs: to solve problems, or to call methods?
 Now, let's consider a scenario we must test:
 
 ```
-Given an account
-When an order is received for a subscription for the account
+Given an order for a subscription
+When the order is fulfilled
+Then the account named on the order has one active subscription
 ```
 
 Compare these two tests:
@@ -66,7 +118,9 @@ var orderService = new OrderService(subscriptions);
 
 orderService.receive(new Order(new Subscription(), new AccountId(1)))
 
-assertThat(subscriptions.activeSubscriptionsIn(new AccountId(1))).containsOnly(new Subscription()))
+assertThat(
+    subscriptions.activeSubscriptionsIn(new AccountId(1)))
+    .containsOnly(new Subscription()))
 ```
 
 ```java
@@ -78,7 +132,8 @@ orderService.receive(new Order(new Subscription(), new AccountId(1)))
 verify(subscriptions).entitleAccount(new Subscription(), new AccountId(1));
 ```
 
-## What's in a type, anyway?
+There is a subtle but important difference in the language here: is the point of the test 
+
 
 
 ## NOTES
@@ -179,6 +234,7 @@ outline (brain dump):
             ArrayList, do you? similarly, if you replace that code, you will simply be replacing it
             with... more code. code you will write quickly, and that won't have its own tests, and
             so we have no idea if it actually supports the contract of the collaborator.
+            * why are we so obsessed with isolation if we trust our collaborators? https://easymock.org/
         * mocking complex protocols like HTTP interactions is fraught with error
             * https://testing.googleblog.com/2018/11/testing-on-toilet-exercise-service-call.html
             
