@@ -11,9 +11,17 @@ popular Java libraries ever](https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2
 What if this isn't actually a good thing?
 
 Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
-media and news feeds, we have found ourselves using it all the time to our own detriment.
+media and news feeds, we have found ourselves using it all the time to our own detriment. What 
+happened? What could Mockito possibly be doing that is so bad for us?
 
-What happened? What could Mockito possibly be doing that is so bad for us?
+I was once a frequent Mockito user, perhaps like you are now. Over time however, as my application 
+architectures improved, as I began to introduce real domain models, my tests were becoming simpler,
+easier to add, and my services easier to develop. Tricky testing problems that loomed over my head
+for years were now trivialized. Much to my surprise, I wasn't using any Mockito at all.
+
+In this post, I demonstrate some compelling and often overlooked advantages to mock alternatives. I 
+encourage casual and devout mock-ists alike to keep calm, open their minds, and try going without 
+for a while. You may be surprised what you find. (I was!)
 
 ## Mocking 101
 
@@ -27,7 +35,7 @@ Foo stubFoo = new Foo() {
 };
 ```
 
-vs.
+versus...
 
 ```java
 Foo mockFoo = mock(Foo.class);
@@ -35,7 +43,7 @@ when(mockFoo.bar()).thenReturn("bar");
 ```
 
 Why bother using complex reflection and low-level bytecode acrobatics to write a class when we can, 
-you know, simply _write a class_ using simple, tool-supported, first-class language features?
+you know, simply _write a class_ using basic, tool-supported, first-class language features?
 
 In the above example, aside from astonishingly greater implementation complexity, the Mockito 
 version actually requires _more_ characters (a lot more if you rewrote the stub as a lambda).
@@ -43,17 +51,24 @@ version actually requires _more_ characters (a lot more if you rewrote the stub 
 ## Why we mock
 
 Of course, I'm mostly lying. The defining feature of mocking libraries is that those implementations
-_aren't_ totally equivalent: mocks _record_ their method calls so you may assert on not just the 
-state of your program, but the _means_ of your program. That is, the state of _interactions_ between
-objects, like what methods were called, how many times, with what arguments, and in what order.
-Much has been written about verifying state vs interactions **TODO–links, summary.**
+_aren't_ totally equivalent: mocks (and their peers, spies) _record_ their method calls so you may 
+assert on not just the state of your program, but the _means_ of your program. That is, the state of
+_interactions_ between objects, like what methods were called, how many times, with what arguments, 
+and in what order. Much has been written about verifying state vs interactions _TODO–links, summary. 
+Or talk about this somewhere else?_
 
-Secondly, this magical runtime-type-implementing DSL has some features that the Java language
-does not. You can simply not implement some methods, and instead of a compilation error, you get a 
-default, no-op implementation. It also lets you accomplish scandalous mischief like reimplementing 
-`final` classes or enums or static methods. I broadly classify these as convenience features, 
-because they save you time by "saving" you from writing a whole class that implements some 
-interface, or refactoring your code so that it may be testable by language-supported means.
+While that is a [mock's true purpose](
+https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs), this 
+magical runtime-type-implementing DSL has some features that the Java language does not. You can 
+simply not implement some methods, and instead of a compilation error, you get a default, no-op 
+implementation. It also lets you accomplish scandalous mischief like reimplementing final classes 
+or enums or static methods. I broadly classify these as convenience features, because they save you 
+time by "saving" you from writing a whole class that implements some interface, or refactoring your 
+code so that it may be testable by language-supported means. It "saves" you from answering that 
+pesky question, "How do I test this?" Every time, the answer is a mock! It's just so easy, after 
+all.
+
+When was the last time you tried testing without mocking? 
 
 ## A Whole Class
 
@@ -80,19 +95,44 @@ taxonomies and hierarchies. [Sorting just makes us feel like we're doing somethi
 *productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
 cozy inside just thinking about it.
 
-Are you thinking about the deep, artful hierarchy of subpackages in you Java code now, hmmm?
+Are you daydreaming about the deep, artful hierarchy of subpackages in you Java code now, hmmm?
 
 "Unit" tests, in the ontology of testing, isolate a unit of code to ensure it functions correctly.
 We contrast this with "integration" tests, which test these units together, without isolation. We 
-heard writing lots of unit tests is good, because of something about a pyramid and an ice cream 
+heard writing lots of unit tests is good, because of [something about a [pyramid and an ice cream](
+https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98) 
 cone, so we have to make sure most of our tests only use isolated units, right?
 
 "Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
 devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
 hyperfocused on isolating a class or method under test from all others.
 
-We must be doing this for good reason. Except, we aren't. There is no reason to generally isolate
-a class or method from other classes or methods.
+Let's back up–why are we replacing collaborators with fakes or mocks or stubs or whatever in the
+first place?
+
+* rarity of a domain model
+* tests in layers - domain model mostly isolated, then services, then application services, then
+http layer – each layer tests the others, too, but does not focus on them – it's about the contract
+at each layer.
+* what is the harm here? if a test fails, it might be because of a lower layer. so what? you've 
+discovered a bug. add a test for that bug at the appropriate layer and fix it. compare to if you
+isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
+is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
+end up testing a substantial amount of code that never actually runs.
+
+## Testable code
+
+## `popularity(x) != value(x, context)`
+
+## When to Mockito
+
+* mockito's own documentation is littered with warnings of when not to use its features
+* legacy code
+* one-off, simple stubs
+
+## Closing thoughts
+
+
 
 ## Asserting on program state vs object interactions
 
