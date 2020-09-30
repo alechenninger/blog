@@ -12,16 +12,21 @@ What if this isn't actually a good thing?
 
 Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
 media and news feeds, we have found ourselves using it all the time to our own detriment. What 
-happened? What could Mockito possibly be doing that is so bad for us?
+happened? What could such a well-engineered, much loved library possibly be doing that is bad for 
+us?
 
 I was once a frequent Mockito user, perhaps like you are now. Over time however, as my application 
-architectures improved, as I began to introduce real domain models, my tests were becoming simpler,
-easier to add, and my services easier to develop. Tricky testing problems that loomed over my head
-for years were now trivialized. Much to my surprise, I wasn't using any Mockito at all.
+architectures improved, as I began to introduce real domain models, the tests I wrote were becoming 
+simpler, easier to add, and services easier to develop. Tricky testing problems that loomed over my 
+head for years now had obvious solutions. Much to my surprise, I was barely using Mockito at all.
 
-In this post, I demonstrate some compelling and often overlooked advantages to mock alternatives. I 
-encourage casual and devout mock-ists alike to keep calm, open their minds, and try going without 
-for a while. You may be surprised what you find. (I was!)
+In this post, I demonstrate some compelling and often overlooked advantages to mock alternatives. We
+will explore the origins of mocking, why mocking may have become so ubiquitous, a world without 
+mocking, and the system of incentives, practices, and abstractions that evolve as a result. Whether
+you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, and try going 
+without for a while. This post will guide you. You may be surprised what you find, as I was.
+
+// Likewise, if you find your projects suffer without mocking, I'd love to hear about it!
 
 ## Mocking 101
 
@@ -48,6 +53,8 @@ you know, simply _write a class_ using basic, tool-supported, first-class langua
 In the above example, aside from astonishingly greater implementation complexity, the Mockito 
 version actually requires _more_ characters (a lot more if you rewrote the stub as a lambda).
 
+We'll come back to this.
+
 ## Why we mock
 
 Of course, I'm mostly lying. The defining feature of mocking libraries is that those implementations
@@ -72,6 +79,16 @@ When was the last time you tried testing without mocking?
 
 ## A Whole Class
 
+* mocks force test setup to repeat knowledge of the implementation of unit-under-test in *how it
+uses* a collaborator and how that collaborators interface works. test setup often has a higher order
+meaning, and we might like to name this. OOP gives us a first class means for capturing a reusable
+operation and giving it a name: a method. but mocking doesn't let us add new methods, because we 
+work with an existing interface.
+* other times, the existing interface might be fine, but the methods have contracts between each 
+other that collaborators might depend on, so your mocking gets complex. instead of each test doing
+complex mocking, maybe you abstract that out to a reusable mock. now you have a reused method that
+configures a new type using a runtime dsl that defines the behavior of methods at runtime. take a 
+step back a second – why again wouldn't you write a class instead?  
 * alternative to mock is often a fake
 * a fake is a demonstration of how a type should behave – it is documentation for our team
 * reuse in other tests
@@ -95,13 +112,14 @@ taxonomies and hierarchies. [Sorting just makes us feel like we're doing somethi
 *productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
 cozy inside just thinking about it.
 
-Are you daydreaming about the deep, artful hierarchy of subpackages in you Java code now, hmmm?
+Are you daydreaming about the deep, artful hierarchy of subpackages in your Java code now, hmmm?
 
 "Unit" tests, in the ontology of testing, isolate a unit of code to ensure it functions correctly.
-We contrast this with "integration" tests, which test these units together, without isolation. We 
-heard writing lots of unit tests is good, because of [something about a [pyramid and an ice cream](
-https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98) 
-cone, so we have to make sure most of our tests only use isolated units, right?
+We often contrast these with "integration" tests, which test these units together, without 
+isolation. We heard writing lots of unit tests is good, because of something about a [pyramid and 
+an ice cream](https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98) 
+cone, so we have to make sure most of our tests only use isolated units, so that most of our tests
+are unit tests.
 
 "Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
 devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
@@ -120,7 +138,13 @@ isolated the bugged dependency with a stub, you'd never discover the real bug un
 is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
 end up testing a substantial amount of code that never actually runs.
 
+## Isolate by abstractionn
+
+* anti-corruptionn layer
+
 ## Testable code
+
+
 
 ## `popularity(x) != value(x, context)`
 
