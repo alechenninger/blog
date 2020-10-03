@@ -10,21 +10,22 @@ popular Java libraries ever](https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2
 
 What if this isn't actually a good thing?
 
-Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
-media and news feeds, we have found ourselves using it all the time to our own detriment. What 
-happened? What could such a well-engineered, much loved library possibly be doing that is bad for 
-us?
-
 I was once a frequent Mockito user, perhaps like you are now. Over time however, as my application 
 architectures improved, as I began to introduce real domain models, the tests I wrote were becoming 
 simpler, easier to add, and services easier to develop. Tricky testing problems that loomed over my 
 head for years now had obvious solutions. Much to my surprise, I was barely using Mockito at all.
 
-In this post, I demonstrate some compelling and often overlooked advantages to mock alternatives. We
-will explore the origins of mocking, why mocking may have become so ubiquitous, a world without 
-mocking, and the system of incentives, practices, and abstractions that evolve as a result. Whether
-you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, and try going 
-without for a while. This post will guide you. You may be surprised what you find, as I was.
+Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
+media and news feeds, we have found ourselves using it all the time to our own detriment. What 
+happened? What could such a well-engineered, much loved library possibly be doing that is bad for 
+us?
+
+In this post, I demonstrate some compelling and, in my experience, overlooked advantages to mock 
+alternatives. We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
+world without mocking, and the system of incentives, practices, and abstractions that evolve as a 
+result. Whether you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, 
+and try going without for a while. This post will guide you. You may be surprised what you find, as 
+I was.
 
 // Likewise, if you find your projects suffer without mocking, I'd love to hear about it!
 
@@ -61,23 +62,49 @@ Of course, I'm mostly lying. The defining feature of mocking libraries is that t
 _aren't_ totally equivalent: mocks (and their peers, spies) _record_ their method calls so you may 
 assert on not just the state of your program, but the _means_ of your program. That is, the state of
 _interactions_ between objects, like what methods were called, how many times, with what arguments, 
-and in what order. Much has been written about verifying state vs interactions _TODO–links, summary. 
-Or talk about this somewhere else?_
+and in what order.
 
 While that is a [mock's true purpose](
-https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs), this 
-magical runtime-type-implementing DSL has some features that the Java language does not. You can 
-simply not implement some methods, and instead of a compilation error, you get a default, no-op 
-implementation. It also lets you accomplish scandalous mischief like reimplementing final classes 
-or enums or static methods. I broadly classify these as convenience features, because they save you 
+https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs), mocking
+libraries are also often used to implement types at runtime, regardless of method verification, as 
+described above. This magical runtime-type-implementing DSL sometimes feels more _convenient_ than 
+the native Java approach, such as when you have a large interface to stub. You can simply not 
+implement some methods, and instead of a compilation error, you get a default, no-op implementation.
+Some mock libraries even let you accomplish scandalous mischief like reimplementing final classes or
+enums or static methods. I broadly classify these as convenience features, because they save you 
 time by "saving" you from writing a whole class that implements some interface, or refactoring your 
 code so that it may be testable by language-supported means. It "saves" you from answering that 
 pesky question, "How do I test this?" Every time, the answer is a mock! It's just so easy, after 
-all.
-
-When was the last time you tried testing without mocking? 
+all. 
 
 ## A Whole Class
+
+When a class under test has a mocked dependency, the dependency must be stubbed.
+
+// Of course, unless you use a spy. But, you're not really supposed to use those. Just [ask 
+Mockito's authors](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13)
+.
+
+We don't want to bother stubbing all the methods out, so we only stub the ones our test needs. 
+Similarly, we don't want to implement state or much logic, so just implement them method say for
+certain arguments, and return some result. Again, the arguments and result are what our test needs.
+
+The first time you do this, for a handful of tests, it is magical. So productive. Once we start to
+add a lot more tests, and our class or dependency evolves over time, a couple things happen.
+
+First of all, our tests are relying on the implementing of our class in subtle ways. They /know/
+what methods to stub, and how. If our implementation changes, we may need to update our tests, 
+even though they are still testing the same scenario. Each time we write a new test, we must recall
+how the dependency is used, so we stub it the right way.
+
+// TODO: example
+
+Secondly, tests are repeating the contract of the dependency. As the dependency changes, all of your
+tests must update. Likewise, as we add more tests, we must again recall how the dependency works,
+so we stub it the right way.
+
+You may argue, "Well just refactor the test setup to be done once in one `@BeforeEach` method
+for the whole class." Except, what about the next test class? What about tests that need
 
 * mocks force test setup to repeat knowledge of the implementation of unit-under-test in *how it
 uses* a collaborator and how that collaborators interface works. test setup often has a higher order
