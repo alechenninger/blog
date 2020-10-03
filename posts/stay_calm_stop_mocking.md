@@ -1,5 +1,5 @@
 <meta name="id" content="5059786785061561365">
-<meta name="labels" content="testing,object oriented programming">
+<meta name="labels" content="testing,object oriented programming,java">
 <meta name="title" content="Keep Calm and Stop Mocking">
 <meta name="description" content="">
 
@@ -24,8 +24,7 @@ In this post, I demonstrate some compelling and, in my experience, overlooked ad
 alternatives. We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
 world without mocking, and the system of incentives, practices, and abstractions that evolve as a 
 result. Whether you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, 
-and try going without for a while. This post will guide you. You may be surprised what you find, as 
-I was.
+and try going without for a while. This post will guide you. You may be surprised what you find.
 
 // Likewise, if you find your projects suffer without mocking, I'd love to hear about it!
 
@@ -54,8 +53,6 @@ you know, simply _write a class_ using basic, tool-supported, first-class langua
 In the above example, aside from astonishingly greater implementation complexity, the Mockito 
 version actually requires _more_ characters (a lot more if you rewrote the stub as a lambda).
 
-We'll come back to this.
-
 ## Why we mock
 
 Of course, I'm mostly lying. The defining feature of mocking libraries is that those implementations
@@ -70,12 +67,13 @@ libraries are also often used to implement types at runtime, regardless of metho
 described above. This magical runtime-type-implementing DSL sometimes feels more _convenient_ than 
 the native Java approach, such as when you have a large interface to stub. You can simply not 
 implement some methods, and instead of a compilation error, you get a default, no-op implementation.
-Some mock libraries even let you accomplish scandalous mischief like reimplementing final classes or
-enums or static methods. I broadly classify these as convenience features, because they save you 
-time by "saving" you from writing a whole class that implements some interface, or refactoring your 
-code so that it may be testable by language-supported means. It "saves" you from answering that 
-pesky question, "How do I test this?" Every time, the answer is a mock! It's just so easy, after 
-all. 
+When implementing a stub, you can directly map known input-output pairs by only stubbing a method 
+for particular arguments (as opposed to writing several conditional expressions). Some mock 
+libraries even let you accomplish scandalous mischief like reimplementing final classes or enums or 
+static methods. I broadly classify these as convenience features, because they save you time by 
+"saving" you from writing a whole class that implements some interface, or refactoring your code so 
+that it may be testable by language-supported means. It "saves" you from answering that pesky 
+question, "How do I test this?" Every time, the answer is a mock! It's just so easy, after all. 
 
 ## A Whole Class
 
@@ -89,13 +87,15 @@ We don't want to bother stubbing all the methods out, so we only stub the ones o
 Similarly, we don't want to implement state or much logic, so just implement them method say for
 certain arguments, and return some result. Again, the arguments and result are what our test needs.
 
-The first time you do this, for a handful of tests, it is magical. So productive. Once we start to
-add a lot more tests, and our class or dependency evolves over time, a couple things happen.
+The first time you do this, for a handful of tests, it is magical and productive. Once we start to
+add a lot more tests, or our classes or dependencies evolves over time, a couple things happen.
 
-First of all, our tests are relying on the implementing of our class in subtle ways. They /know/
-what methods to stub, and how. If our implementation changes, we may need to update our tests, 
-even though they are still testing the same scenario. Each time we write a new test, we must recall
-how the dependency is used, so we stub it the right way.
+First of all, in this short-hand stubbing pattern, our tests are relying on the implementation of 
+our class in subtle ways. By leaving out stubbing some methods, we imply we know what methods are 
+used. By only stubbing for certain arguments, we imply we know how those methods are used. If our 
+implementation changes, we may need to update our tests, even though they are still testing the same
+scenario. Each time we write a new test, we must recall how the dependency is used, so we stub it 
+the right way.
 
 // TODO: example
 
