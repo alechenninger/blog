@@ -11,9 +11,11 @@ popular Java libraries ever](https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2
 What if this isn't actually a good thing?
 
 I was once a frequent Mockito user, perhaps like you are now. Over time however, as my application 
-architectures improved, as I began to introduce real domain models, the tests I wrote were becoming 
-simpler, easier to add, and services easier to develop. Tricky testing problems that loomed over my 
-head for years now had obvious solutions. Much to my surprise, I was barely using Mockito at all.
+architectures improved, as I began to introduce 
+[real domain models](http://qala.io/blog/anaemic-architecture-enemy-of-testing.html), the tests I 
+wrote were becoming simpler, easier to add, and services easier to develop. Tricky testing problems 
+that loomed over my head for years now had obvious solutions. Much to my surprise, I was barely 
+using Mockito at all.
 
 Consider Mockito may be too good at what it does. Like habitual scrolling through endless social 
 media and news feeds, we have found ourselves using it all the time to our own detriment. What 
@@ -64,47 +66,70 @@ and in what order.
 While that is a [mock's true purpose](
 https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs), mocking
 libraries are also often used to implement types at runtime, regardless of method verification, as 
-described above. This magical runtime-type-implementing DSL sometimes feels more _convenient_ than 
-the native Java approach, such as when you have a large interface to stub. You can simply not 
-implement some methods, and instead of a compilation error, you get a default, no-op implementation.
-When implementing a stub, you can directly map known input-output pairs by only stubbing a method 
-for particular arguments (as opposed to writing several conditional expressions). Some mock 
-libraries even let you accomplish scandalous mischief like reimplementing final classes or enums or 
-static methods. I broadly classify these as convenience features, because they save you time by 
-"saving" you from writing a whole class that implements some interface, or refactoring your code so 
-that it may be testable by language-supported means. It "saves" you from answering that pesky 
-question, "How do I test this?" Every time, the answer is a mock! It's just so easy, after all. 
+described above. This magical runtime-type-implementing DSL often feels more _convenient_ than the 
+native Java approach, such as when you have a large interface to stub. You can simply not implement 
+some methods, and instead of a compilation error, you get a default, no-op implementation. When 
+implementing a stub, you can directly map known input-output pairs by only stubbing a method for 
+particular arguments (as opposed to writing several conditional expressions). Some mock libraries 
+even let you accomplish scandalous mischief like reimplementing final classes or enums or static 
+methods. I broadly classify these as convenience features, because they save you time by "saving" 
+you from writing a whole class that implements some interface, or refactoring your code so that it 
+may be testable by language-supported means. It "saves" you from answering that pesky question, "How
+do I test this?" Every time, the answer is a mock! It's just so easy, after all. 
 
 ## A Whole Class
 
-When a class under test has a mocked dependency, the dependency must be stubbed.
+When a class under test has a mocked dependency, the dependency must be stubbed according to the 
+needs of your test.
 
 // Of course, unless you use a spy. But, you're not really supposed to use those. Just [ask 
-Mockito's authors](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13)
-.
+Mockito's authors](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13).
 
 We don't want to bother stubbing all the methods out, so we only stub the ones our test needs. 
 Similarly, we don't want to implement state or much logic, so just implement them method say for
-certain arguments, and return some result. Again, the arguments and result are what our test needs.
+certain arguments, and return some result.
 
 The first time you do this, for a handful of tests, it is magical and productive. Once we start to
-add a lot more tests, or our classes or dependencies evolves over time, a couple things happen.
+add a lot more tests, or our classes or dependencies evolves over time, a couple of things happen.
 
-First of all, in this short-hand stubbing pattern, our tests are relying on the implementation of 
-our class in subtle ways. By leaving out stubbing some methods, we imply we know what methods are 
-used. By only stubbing for certain arguments, we imply we know how those methods are used. If our 
-implementation changes, we may need to update our tests, even though they are still testing the same
-scenario. Each time we write a new test, we must recall how the dependency is used, so we stub it 
+First of all, in this short-hand stubbing pattern, our tests are [relying on the implementation of 
+our class](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html) in 
+subtle ways. By leaving out stubbing some methods, we imply we know _what_ methods are used. By only
+stubbing for certain arguments, we imply we know _how_ those methods are used. If our implementation
+changes, we may need to update our tests, even though they are still testing the same scenario.
+Likewise, each time we write a new test, we must recall how the dependency is used, so we stub it
 the right way.
 
 // TODO: example
 
-Secondly, tests are repeating the contract of the dependency. As the dependency changes, all of your
-tests must update. Likewise, as we add more tests, we must again recall how the dependency works,
-so we stub it the right way.
+Secondly, tests are repeating the contract of the dependency. That is, as the dependency changes, 
+any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
+more tests, we must again recall how the dependency works, so we stub it the right way.
 
-You may argue, "Well just refactor the test setup to be done once in one `@BeforeEach` method
-for the whole class." Except, what about the next test class? What about tests that need
+To remove some of this repetition, some might simply refactor the test setup to be done once in one 
+`@BeforeEach` method for the whole class. But what about the next class that uses this dependency?
+Okay, fine, pull out the test setup into other reusable classes which stub dependencies for you.
+Then, reuse that in each test class.
+
+I've seen this. You know another way to make an implementation of a class reusable so that you don't
+have to constantly reimplement it? That's right: writing a class! No, not the meta-programming way;
+the good ol'-fashioned Java way.
+
+If you aren't convinced writing a class instead of mocking does much to improve the problems 
+mentioned above, I don't blame you. The real power in writing a class is that it is _whole_: a 
+_whole idea_: not just a collection of delicately specific stubs, but a persistent, evolvable and
+cohesive implementation devoted to the problem of testing.
+
+// Examples of fakes/stubs capturing test setup:
+// * act as in call context
+// * external services set up state
+// * fake clock manipulation
+
+When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
+these libraries has made us forget that we can often do much better than a few stubbed methods.** 
+Like aimlessly adding getters and setters _(do I have to write one of these about lombok now?)_, we
+have forgotten the whole point of object-oriented programming: objects as useful, cohesive 
+abstractions. No wonder it gets so much flak. 
 
 * mocks force test setup to repeat knowledge of the implementation of unit-under-test in *how it
 uses* a collaborator and how that collaborators interface works. test setup often has a higher order
@@ -141,6 +166,9 @@ cozy inside just thinking about it.
 
 Are you daydreaming about the deep, artful hierarchy of subpackages in your Java code now, hmmm?
 
+// TODO: link to other test type articles like https://blog.thecodewhisperer.com/permalink/integrated-tests-are-a-scam
+and http://qala.io/blog/holes-in-test-terminology.html and the two in outline at bottom
+
 "Unit" tests, in the ontology of testing, isolate a unit of code to ensure it functions correctly.
 We often contrast these with "integration" tests, which test these units together, without 
 isolation. We heard writing lots of unit tests is good, because of something about a [pyramid and 
@@ -151,6 +179,9 @@ are unit tests.
 "Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
 devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
 hyperfocused on isolating a class or method under test from all others.
+
+// TODO: can link to some funny comments showing people obsessed with isolation like
+https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369835537619#c6123125690578583371
 
 Let's back up–why are we replacing collaborators with fakes or mocks or stubs or whatever in the
 first place?
@@ -164,6 +195,9 @@ discovered a bug. add a test for that bug at the appropriate layer and fix it. c
 isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
 is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
 end up testing a substantial amount of code that never actually runs.
+
+> [Mocks are like hard drugs... the more you use, the more separated from reality everything 
+becomes.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
 
 ## Isolate by abstractionn
 
@@ -183,7 +217,20 @@ end up testing a substantial amount of code that never actually runs.
 
 ## Closing thoughts
 
-
+* Mostly, tools are not bad or good. We must remember to use them with intention. 
+* Reuse your existing, well-tested implementations where you can. Strive to make your classes
+reusable in tests. Never stub or fake business logic.
+* Start tests from your core types and work outward, focusing on the testing the contract of the 
+class under test. Don't worry if the tests are somehow redundant with other tests–that's a matter
+of implementation. What matters is the class, in conjunction with obedient collaborators, implements
+its own contract.
+* When using the real thing is harmful (such as too complex to set up, which often also means the 
+tests would run too slowly), ensure you've first isolated through abstraction. Then, fake the 
+abstraction. Write tests that run against both the fake and the real implementation to ensure the
+fake is compliant.
+* Capture common set up scenarios in the language of your problem domain as methods on your fakes.
+* Compile your fakes with your program, and put them behind configuration flags or profiles to 
+enable lightweight modes of execution.
 
 ## Asserting on program state vs object interactions
 
