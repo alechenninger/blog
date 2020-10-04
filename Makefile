@@ -1,10 +1,10 @@
 .PHONY: build watch init
 
 build:
-	@build_blog build
+	@blog build
 
 watch:
-	@build_blog watch
+	@blog watch
 
 init:
 	@pub global activate --source path build/

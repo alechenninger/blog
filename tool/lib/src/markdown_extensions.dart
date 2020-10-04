@@ -156,7 +156,9 @@ class DefinitionListSyntax extends BlockSyntax {
 
   @override
   bool canParse(BlockParser parser) {
-    return super.canParse(parser) && _definitionPattern.hasMatch(parser.next);
+    if (!super.canParse(parser)) return false;
+    var next = parser.next;
+    return next != null && _definitionPattern.hasMatch(parser.next);
   }
 }
 
