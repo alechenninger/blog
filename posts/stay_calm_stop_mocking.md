@@ -75,7 +75,7 @@ even let you accomplish scandalous mischief like reimplementing final classes or
 methods. I broadly classify these as convenience features, because they save you time by "saving" 
 you from writing a whole class that implements some interface, or refactoring your code so that it 
 may be testable by language-supported means. It "saves" you from answering that pesky question, "How
-do I test this?" Every time, the answer is a mock! It's just so easy, after all. 
+do I test this?" Every time, the answer is a mock!
 
 ## A Whole Class
 
@@ -117,8 +117,8 @@ the good ol'-fashioned Java way.
 
 If you aren't convinced writing a class instead of mocking does much to improve the problems 
 mentioned above, I don't blame you. The real power in writing a class is that it is _whole_: a 
-_whole idea_: not just a collection of delicately specific stubs, but a persistent, evolvable and
-cohesive implementation devoted to the problem of testing.
+_whole idea_. It's not just a collection of delicately specific stubs, but a persistent, evolvable 
+and cohesive implementation devoted to the problem of testing.
 
 // Examples of fakes/stubs capturing test setup:
 // * act as in call context
@@ -129,7 +129,7 @@ When all you need is a few stubbed methods, mocking libraries are great! **But t
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
 Like aimlessly adding getters and setters _(do I have to write one of these about lombok now?)_, we
 have forgotten the whole point of object-oriented programming: objects as useful, cohesive 
-abstractions. No wonder it gets so much flak. 
+abstractions. No wonder OOP gets so much flak. 
 
 * mocks force test setup to repeat knowledge of the implementation of unit-under-test in *how it
 uses* a collaborator and how that collaborators interface works. test setup often has a higher order
@@ -159,32 +159,48 @@ step back a second – why again wouldn't you write a class instead?
 
 ## The futility of isolation
 
-We humans are innately obsessed with organizing our thoughts and concepts with ontologies and 
-taxonomies and hierarchies. [Sorting just makes us feel like we're doing something *good* and 
+We humans are innately preoccupied with organizing our thoughts and concepts with ontologies and 
+taxonomies. [Sorting just makes us feel like we're doing something *good* and 
 *productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
 cozy inside just thinking about it.
 
-Are you daydreaming about the deep, artful hierarchy of subpackages in your Java code now, hmmm?
+Perhaps you a recall of tinge of satisfaction you've added yet another subpackage inside your Java
+project?
 
-// TODO: link to other test type articles like https://blog.thecodewhisperer.com/permalink/integrated-tests-are-a-scam
-and http://qala.io/blog/holes-in-test-terminology.html and the two in outline at bottom
-
-"Unit" tests, in the ontology of testing, isolate a unit of code to ensure it functions correctly.
-We often contrast these with "integration" tests, which test these units together, without 
-isolation. We heard writing lots of unit tests is good, because of something about a [pyramid and 
-an ice cream](https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98) 
-cone, so we have to make sure most of our tests only use isolated units, so that most of our tests
-are unit tests.
+"Unit" tests–sometimes called "component" tests–in the ontology of testing, isolate a unit of code
+to ensure it functions correctly. We often contrast these with "integration" tests (confusingly, 
+sometimes also called component tests), which test units together, without isolation. We heard 
+writing lots of unit tests is good, because of something about a 
+[pyramid and an ice cream cone](https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98),
+so we have to make sure most of our tests only use isolated units, so that most of our tests are 
+unit tests.
 
 "Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
 devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
 hyperfocused on isolating a class or method under test from all others.
 
-// TODO: can link to some funny comments showing people obsessed with isolation like
-https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369835537619#c6123125690578583371
+// Listen to some of these overreactions at the suggestion that we 
+[may be trying too hard to isolate](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html):
+// 
+// * <q>Also it's called unit testing for a reason, testing dependencies is a nono.</q>
+// * <q>The whole point of unit testing is that you are attempting to test a unit of functionality.</q>
+// 
+// Both of these commenters are falling into the same trap: circular reasoning. _"You can't test 
+// dependencies in a unit test because unit tests don't test dependencies."_
 
-Let's back up–why are we replacing collaborators with fakes or mocks or stubs or whatever in the
+Let's back up. Why are we replacing collaborators with fakes or mocks or stubs or whatever in the
 first place?
+
+* We'd like the cause of failures to be clear. More dependencies means more places to look for a 
+bug. More places to look means slower diagnoses, slower diagnoses means users see features and fixes
+less frequently. 
+* We'd like to have fast feedback cycles. Dependencies can be heavy, like databases or other
+servers which take time to set up, slowing down those cycles. Fast feedback cycles mean we can ship
+to our users more frequently.
+* We'd like tests to be easy to write, so we can write many, gain lots of confidence, and still ship
+often.
+
+These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/)
 
 * rarity of a domain model
 * tests in layers - domain model mostly isolated, then services, then application services, then
@@ -195,6 +211,8 @@ discovered a bug. add a test for that bug at the appropriate layer and fix it. c
 isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
 is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
 end up testing a substantial amount of code that never actually runs.
+
+Perhaps this comment sums it up:
 
 > [Mocks are like hard drugs... the more you use, the more separated from reality everything 
 becomes.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
@@ -231,6 +249,20 @@ fake is compliant.
 * Capture common set up scenarios in the language of your problem domain as methods on your fakes.
 * Compile your fakes with your program, and put them behind configuration flags or profiles to 
 enable lightweight modes of execution.
+
+
+---
+
+Old material:
+
+// I've only scratched the surface. Other testing types include 
+["integrated" tests](https://blog.thecodewhisperer.com/permalink/integrated-tests-are-a-scam) (yes, 
+not to be confused with "integration" tests), "component" tests, "end-to-end" tests, "service" 
+tests, "system" tests, "contract" tests, ... I'm sure I've missed some. Part of the problem is these
+types describe 
+[orthogonal dimensions of testing](http://qala.io/blog/holes-in-test-terminology.html). Perhaps, 
+though, the Google approach is the least problematic simplification: 
+[small, medium, and large](https://testing.googleblog.com/2010/12/test-sizes.html).
 
 ## Asserting on program state vs object interactions
 
