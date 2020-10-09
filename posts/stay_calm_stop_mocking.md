@@ -128,14 +128,23 @@ and cohesive implementation devoted to the problem of testing.
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
 Like aimlessly adding getters and setters _(do I have to write one of these about lombok now?)_, we
-have forgotten the whole point of object-oriented programming: objects as useful, cohesive 
-abstractions. No wonder OOP gets so much flak. 
+have forgotten the whole point of object-oriented programming is that objects are useful, cohesive 
+abstractions. No wonder OOP gets so much flak.
 
-* mocks force test setup to repeat knowledge of the implementation of unit-under-test in *how it
-uses* a collaborator and how that collaborators interface works. test setup often has a higher order
-meaning, and we might like to name this. OOP gives us a first class means for capturing a reusable
-operation and giving it a name: a method. but mocking doesn't let us add new methods, because we 
-work with an existing interface.
+Test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When we stub an 
+external service call like `when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)`, 
+what we are saying is, "Account 1 is on credit hold." Rather than reading and writing a mock DSL 
+that speaks in terms of methods returning things, we can _name_ this whole concept as a method 
+itself as in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all 
+developers to reuse (including your future self). This is encapsulation: giving a name to some 
+procedure. It builds the 
+[ubiquitous language](https://martinfowler.com/bliki/UbiquitousLanguage.html) for your team and your
+tools. Have some other procedure or concept that comes up while testing? Now you have a place you 
+can name it and reuse it later: a class! A mock can't do this, because it only works within the 
+confines of an existing production interface, nor does it really handle state well, unlike classes
+which have first-class (pun intended) state management. It's easy to take for granted all a class 
+can do for us.
+
 * other times, the existing interface might be fine, but the methods have contracts between each 
 other that collaborators might depend on, so your mocking gets complex. instead of each test doing
 complex mocking, maybe you abstract that out to a reusable mock. now you have a reused method that
@@ -185,7 +194,7 @@ hyperfocused on isolating a class or method under test from all others.
 // * <q>Also it's called unit testing for a reason, testing dependencies is a nono.</q>
 // * <q>The whole point of unit testing is that you are attempting to test a unit of functionality.</q>
 // 
-// Both of these commenters are falling into the same trap: circular reasoning. _"You can't test 
+// Both of these commenters are falling into the same circular trap: _"You can't test 
 // dependencies in a unit test because unit tests don't test dependencies."_
 
 Let's back up. Why are we replacing collaborators with fakes or mocks or stubs or whatever in the
@@ -200,7 +209,17 @@ to our users more frequently.
 * We'd like tests to be easy to write, so we can write many, gain lots of confidence, and still ship
 often.
 
-These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/)
+These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
+converge at the same reason. The goal is to ship more value, more quickly. However, replacing 
+collaborators with test doubles has an effect directly counter to this goal: _those replacements 
+aren't what we actually ship_. If you go too far with mocking, what actually happens is that your
+feedback cycles _slow way down_ because you aren't actually seeing your code as it truly works until
+you deploy and get it in front of users. To solve that you might even think, "well I'll just 
+automate a bunch of tests against my running application." In other words, not isolating individual 
+units at all!
+
+If we forgot whichever ontology of testing you subscribe to for a moment,  
+
 
 * rarity of a domain model
 * tests in layers - domain model mostly isolated, then services, then application services, then
