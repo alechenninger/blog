@@ -104,7 +104,10 @@ the right way.
 
 Secondly, tests are repeating the contract of the dependency. That is, as the dependency changes, 
 any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
-more tests, we must again recall how the dependency works, so we stub it the right way.
+more tests, we must again recall how the dependency works, so we stub it the right way. For example,
+if an interface encapsulates some state between subsequent method calls, or a method has some
+preconditions or postconditions. If your stub does not reimplement this correctly, your tests may
+pass even though the system-under-test is not correct.
 
 To remove some of this repetition, some might simply refactor the test setup to be done once in one 
 `@BeforeEach` method for the whole class. But what about the next class that uses this dependency?
@@ -120,51 +123,78 @@ mentioned above, I don't blame you. The real power in writing a class is that it
 _whole idea_. It's not just a collection of delicately specific stubs, but a persistent, evolvable 
 and cohesive implementation devoted to the problem of testing.
 
-// Examples of fakes/stubs capturing test setup:
-// * act as in call context
-// * external services set up state
-// * fake clock manipulation
-
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
 Like aimlessly adding getters and setters _(do I have to write one of these about lombok now?)_, we
 have forgotten the whole point of object-oriented programming is that objects are useful, cohesive 
 abstractions. No wonder OOP gets so much flak.
 
-Test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When we stub an 
-external service call like `when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)`, 
-what we are saying is, "Account 1 is on credit hold." Rather than reading and writing a mock DSL 
-that speaks in terms of methods returning things, we can _name_ this whole concept as a method 
-itself as in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all 
-developers to reuse (including your future self). This is encapsulation: giving a name to some 
-procedure. It builds the 
-[ubiquitous language](https://martinfowler.com/bliki/UbiquitousLanguage.html) for your team and your
-tools. Have some other procedure or concept that comes up while testing? Now you have a place you 
-can name it and reuse it later: a class! A mock can't do this, because it only works within the 
-confines of an existing production interface, nor does it really handle state well, unlike classes
-which have first-class (pun intended) state management. It's easy to take for granted all a class 
-can do for us.
+Consider that test setup often has a higher order semantic meaning mock DSLs end up obfuscating. 
+When we stub an external service call like 
+`when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)`, what we are saying is, 
+"Account 1 is on credit hold." Rather than reading and writing a mock DSL that speaks in terms of 
+methods and arguments and returning things, we can _name_ this whole concept as a method itself, as 
+in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all developers to 
+reuse (including your future self). This is encapsulation: giving a name to some procedure or 
+concept. It builds the [ubiquitous language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
+for your team and your tools. Have some other procedure or concept that comes up while testing? Now 
+you have a place you can name it and reuse it later: a class! I find myself adding and using methods 
+like these constantly in my tests, and it is incredibly productive. A mock can't do this, because it 
+only works within the confines of an existing production interface.
 
-* other times, the existing interface might be fine, but the methods have contracts between each 
-other that collaborators might depend on, so your mocking gets complex. instead of each test doing
-complex mocking, maybe you abstract that out to a reusable mock. now you have a reused method that
-configures a new type using a runtime dsl that defines the behavior of methods at runtime. take a 
-step back a second – why again wouldn't you write a class instead?  
-* alternative to mock is often a fake
-* a fake is a demonstration of how a type should behave – it is documentation for our team
-* reuse in other tests
-    * verify captures contract
-    * what about when you want to reuse knowledge of that contract?
-    * write methods that create mocks again and again the same way, or verify the same way
-    * compare this to writing a class that captures the contract
-* codify domain knowledge in set up
+Above, we discussed that classes save you from reimplementing a contract for many tests. More than
+that, however, they make implementing those contracts simpler in the first place. Need a place for 
+persistent state within the type? Well, now you have fields of course. It's easy to take for granted
+all a class can do for us.
 
-## Hermetic servers
+## Fakes and hermetic servers
 
-* fakes can be used outside of src/test for variety of valuable use cases
-* help yourself test / experience a service locally
-* help other teams test
-* load test a service isolating certain dependencies
+What we're discussing here so far is actually closer to a 
+[{fake}](https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs) 
+than a {stub}. A fake is a reimplementation of some interface suitable for testing. As we've 
+described, fakes are often very useful, and deserve a priority slot in our testing toolkit; slots
+too often monopolized by mocks.
+
+Another way I like to think about a fake is a _demonstration_ of how some type is supposed to work. 
+This serves as a reference implementation, a testbed for experimentation, as well as documentation 
+for ourselves, our teammates, and our successors. Not only that, but as a class of its own, it can 
+also get its own tests. In fact, if you're clever, you can even test your fake against the same 
+tests as your production implementation–and you should. This ensures that when you use a test double 
+instead of the real thing, you haven't invalidated your tests.
+
+// Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of 
+complexity in test setup, and aren't the focus of most of your tests anyway. That is, things like 
+nonvolatile persistence and high-performance concurrency control that we expect of our production 
+persistence abstractions, and which usually require a full database. An implementation can avoid
+the filesystem all together with in memory state, and can synchronize all of its methods to quickly
+make it thread-safe. TODO: appendix about in-memory repositories
+
+Yet we have still only scratched the surface. As the software industry is increasingly concerned
+with instrumenting code for observability and 
+[safe, frequent production rollouts](https://itrevolution.com/book/accelerate/)–effectively, 
+production testability–fakes increasingly make sense as a shipped _feature of our software_ rather
+than compiled-away test code. As a feature, a fake works as an in-memory, out-of-the-box replacement
+of complicated external process dependencies and the burdensome configuration and coupling they 
+bring along with them. Running a service can then be effortless by way of a default, in-memory 
+configuration, also called a 
+[hermetic server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically 
+sealed). As a feature, it is one of developer experience though still profoundly impacting, if 
+indirectly, impacting customer experience through safer and faster delivery. In a digital age, you 
+can easily argue the developers that use your service are just another customer, anyway. 
+
+This accessibility is revolutionary: a new teammate can start up your services locally with simple
+system setup and one command on their first day. Other teams can realistically use your service, 
+without understanding its ever-evolving internals, in integration testing. Your projects own 
+automated tests can interact with the whole service and retain unit-test-like speed. And it can all 
+be done on airplane-mode.
+
+Fakes can even help test operational concerns. A colleague of mine recently needed to load test her
+service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, no 
+less). Rather than interrupting and waiting on the team which manages that SaaS, she simply 
+reconfigured the service to use an in-memory fake. Other dependencies, which needed to be load 
+tested, kept their production, external configuration. She was able to hammer some dependencies,
+which were under her control and supervision, while the rest were blissfully undisturbed. Her next 
+release went off without a hitch.
 
 ## The futility of isolation
 
@@ -173,8 +203,8 @@ taxonomies. [Sorting just makes us feel like we're doing something *good* and
 *productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
 cozy inside just thinking about it.
 
-Perhaps you a recall of tinge of satisfaction you've added yet another subpackage inside your Java
-project?
+Perhaps you a recall of tinge of satisfaction when you've added yet another subpackage inside your 
+Java project?
 
 "Unit" tests–sometimes called "component" tests–in the ontology of testing, isolate a unit of code
 to ensure it functions correctly. We often contrast these with "integration" tests (confusingly, 
@@ -197,8 +227,8 @@ hyperfocused on isolating a class or method under test from all others.
 // Both of these commenters are falling into the same circular trap: _"You can't test 
 // dependencies in a unit test because unit tests don't test dependencies."_
 
-Let's back up. Why are we replacing collaborators with fakes or mocks or stubs or whatever in the
-first place?
+Let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or fakes. 
+Why are we replacing dependencies in the first place?
 
 * We'd like the cause of failures to be clear. More dependencies means more places to look for a 
 bug. More places to look means slower diagnoses, slower diagnoses means users see features and fixes
