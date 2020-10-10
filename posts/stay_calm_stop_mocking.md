@@ -30,7 +30,7 @@ and try going without for a while. This post will guide you. You may be surprise
 
 // Likewise, if you find your projects suffer without mocking, I'd love to hear about it!
 
-## Mocking 101
+## Why we mock
 
 Mockito is a mocking library, but let's respect that for what it is: meta-programming. Mocking is 
 using a library's own types, to implement new types, at runtime, in a language where you can 
@@ -55,7 +55,7 @@ you know, simply _write a class_ using basic, tool-supported, first-class langua
 In the above example, aside from astonishingly greater implementation complexity, the Mockito 
 version actually requires _more_ characters (a lot more if you rewrote the stub as a lambda).
 
-## Why we mock
+## Why we actually mock
 
 Of course, I'm mostly lying. The defining feature of mocking libraries is that those implementations
 _aren't_ totally equivalent: mocks (and their peers, spies) _record_ their method calls so you may 
@@ -86,7 +86,7 @@ needs of your test.
 Mockito's authors](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13).
 
 We don't want to bother stubbing all the methods out, so we only stub the ones our test needs. 
-Similarly, we don't want to implement state or much logic, so just implement them method say for
+Similarly, we don't want to implement state or much logic, so just implement the method say for
 certain arguments, and return some result.
 
 The first time you do this, for a handful of tests, it is magical and productive. Once we start to
@@ -106,7 +106,7 @@ Secondly, tests are repeating the contract of the dependency. That is, as the de
 any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
 more tests, we must again recall how the dependency works, so we stub it the right way. For example,
 if an interface encapsulates some state between subsequent method calls, or a method has some
-preconditions or postconditions. If your stub does not reimplement this correctly, your tests may
+preconditions or postconditions, and your stub does not reimplement these correctly, your tests may
 pass even though the system-under-test is not correct.
 
 To remove some of this repetition, some might simply refactor the test setup to be done once in one 
@@ -145,7 +145,7 @@ only works within the confines of an existing production interface.
 Above, we discussed that classes save you from reimplementing a contract for many tests. More than
 that, however, they make implementing those contracts simpler in the first place. Need a place for 
 persistent state within the type? Well, now you have fields of course. It's easy to take for granted
-all a class can do for us.
+all the humble class can do for us.
 
 ## Fakes and hermetic servers
 
@@ -163,24 +163,24 @@ tests as your production implementation–and you should. This ensures that when
 instead of the real thing, you haven't invalidated your tests.
 
 // Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of 
-complexity in test setup, and aren't the focus of most of your tests anyway. That is, things like 
-nonvolatile persistence and high-performance concurrency control that we expect of our production 
-persistence abstractions, and which usually require a full database. An implementation can avoid
-the filesystem all together with in memory state, and can synchronize all of its methods to quickly
-make it thread-safe. TODO: appendix about in-memory repositories
+complexity in test setup, and aren't the focus of most of your tests anyway. For example, they can 
+just ignore solutions for nonvolatile persistence and high-performance concurrency control that we 
+expect of our production persistence abstractions, and which usually require a full database. An 
+implementation can avoid the filesystem all together with in memory state, and can `synchronize` all
+of its methods to quickly make it thread-safe. TODO: appendix about in-memory repositories
 
 Yet we have still only scratched the surface. As the software industry is increasingly concerned
 with instrumenting code for observability and 
 [safe, frequent production rollouts](https://itrevolution.com/book/accelerate/)–effectively, 
 production testability–fakes increasingly make sense as a shipped _feature of our software_ rather
-than compiled-away test code. As a feature, a fake works as an in-memory, out-of-the-box replacement
+than compiled-away test code. As a feature, fakes work as in-memory, out-of-the-box replacements
 of complicated external process dependencies and the burdensome configuration and coupling they 
 bring along with them. Running a service can then be effortless by way of a default, in-memory 
 configuration, also called a 
 [hermetic server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically 
-sealed). As a feature, it is one of developer experience though still profoundly impacting, if 
-indirectly, impacting customer experience through safer and faster delivery. In a digital age, you 
-can easily argue the developers that use your service are just another customer, anyway. 
+sealed). As a feature, it is one of developer experience though it still profoundly impacts, if 
+indirectly, customer experience through safer and faster delivery. In a digital age, you can easily 
+argue the developers that use your service are just another customer, anyway. 
 
 This accessibility is revolutionary: a new teammate can start up your services locally with simple
 system setup and one command on their first day. Other teams can realistically use your service, 
@@ -224,33 +224,45 @@ hyperfocused on isolating a class or method under test from all others.
 // * <q>Also it's called unit testing for a reason, testing dependencies is a nono.</q>
 // * <q>The whole point of unit testing is that you are attempting to test a unit of functionality.</q>
 // 
-// Both of these commenters are falling into the same circular trap: _"You can't test 
+// Both of these commenters are falling into the same meaningless, circular trap: _"You can't test 
 // dependencies in a unit test because unit tests don't test dependencies."_
 
-Let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or fakes. 
+So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or fakes. 
 Why are we replacing dependencies in the first place?
 
 * We'd like the cause of failures to be clear. More dependencies means more places to look for a 
-bug. More places to look means slower diagnoses, slower diagnoses means users see features and fixes
-less frequently. 
+bug. More places to look means slower diagnoses, and slower diagnoses means users see features and 
+fixes less frequently. 
 * We'd like to have fast feedback cycles. Dependencies can be heavy, like databases or other
 servers which take time to set up, slowing down those cycles. Fast feedback cycles mean we can ship
 to our users more frequently.
-* We'd like tests to be easy to write, so we can write many, gain lots of confidence, and still ship
-often.
+* We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
+bugs, which means we can spend more time shipping features over fixes.
 
 These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
-converge at the same reason. The goal is to ship more value, more quickly. However, replacing 
-collaborators with test doubles has an effect directly counter to this goal: _those replacements 
-aren't what we actually ship_. If you go too far with mocking, what actually happens is that your
-feedback cycles _slow way down_ because you aren't actually seeing your code as it truly works until
-you deploy and get it in front of users. To solve that you might even think, "well I'll just 
-automate a bunch of tests against my running application." In other words, not isolating individual 
-units at all!
+converge at the same reason. It is the reason we write tests in the first place: to ship more value,
+more quickly (After all, 
+[features which improve safety also improve speed](https://www.hotcars.com/regular-cars-have-these-10-safety-innovations-straight-from-the-race-track/))).
+Crucially, replacing collaborators with test doubles has an effect directly counter to this end 
+goal: _those replacements aren't what we actually ship_. If you go too far with mocking, what 
+actually happens is that your feedback cycles _slow way down_ because you aren't actually seeing 
+your code as it truly works until you deploy and get it in front of users.
 
-If we forgot whichever ontology of testing you subscribe to for a moment,  
+// To solve that you might even think, "well I'll just automate a bunch of tests against my running 
+application." In other words, not isolating individual units at all!
 
+> Mocks are like hard drugs... the more you use, the more separated from reality everything becomes.
+([source]((https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)))
 
+This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
+end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9), much 
+like mocks themselves. If think about our testing decisions in terms of value throughput (which is 
+the only thing that matters) instead of the predispositions of the testing models we happen to 
+subscribe to, we end up making very different decisions.
+
+Specifically, **don't replace a dependency unless you have a really good reason to**. 
+
+* all tests are integration tests
 * rarity of a domain model
 * tests in layers - domain model mostly isolated, then services, then application services, then
 http layer – each layer tests the others, too, but does not focus on them – it's about the contract
@@ -260,11 +272,6 @@ discovered a bug. add a test for that bug at the appropriate layer and fix it. c
 isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
 is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
 end up testing a substantial amount of code that never actually runs.
-
-Perhaps this comment sums it up:
-
-> [Mocks are like hard drugs... the more you use, the more separated from reality everything 
-becomes.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
 
 ## Isolate by abstractionn
 
