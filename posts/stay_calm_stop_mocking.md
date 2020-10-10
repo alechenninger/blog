@@ -151,9 +151,9 @@ all the humble class can do for us.
 
 What we're discussing here so far is actually closer to a 
 [{fake}](https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs) 
-than a {stub}. A fake is a reimplementation of some interface suitable for testing. As we've 
-described, fakes are often very useful, and deserve a priority slot in our testing toolkit; slots
-too often monopolized by mocks.
+than a {stub}. A fake is a complete reimplementation of some interface suitable for testing. As 
+we've described, fakes are often very useful, and deserve a priority slot in our testing toolkit; 
+slots too often monopolized by mocks.
 
 Another way I like to think about a fake is a _demonstration_ of how some type is supposed to work. 
 This serves as a reference implementation, a testbed for experimentation, as well as documentation 
@@ -173,14 +173,14 @@ Yet we have still only scratched the surface. As the software industry is increa
 with instrumenting code for observability and 
 [safe, frequent production rollouts](https://itrevolution.com/book/accelerate/)–effectively, 
 production testability–fakes increasingly make sense as a shipped _feature of our software_ rather
-than compiled-away test code. As a feature, fakes work as in-memory, out-of-the-box replacements
-of complicated external process dependencies and the burdensome configuration and coupling they 
-bring along with them. Running a service can then be effortless by way of a default, in-memory 
-configuration, also called a 
+than merely compiled-away test code. As a feature, fakes work as in-memory, out-of-the-box 
+replacements of complicated external process dependencies and the burdensome configuration and 
+coupling they bring along with them. Running a service can then be effortless by way of a default, 
+in-memory configuration, also called a 
 [hermetic server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically 
-sealed). As a feature, it is one of developer experience though it still profoundly impacts, if 
-indirectly, customer experience through safer and faster delivery. In a digital age, you can easily 
-argue the developers that use your service are just another customer, anyway. 
+sealed). As a feature, it is one of developer experience, though it still profoundly impacts, if 
+indirectly, customer experience, through safer and faster delivery. In a digital age, you can easily 
+argue a developer that relies on your service is just another customer, anyway. 
 
 This accessibility is revolutionary: a new teammate can start up your services locally with simple
 system setup and one command on their first day. Other teams can realistically use your service, 
@@ -231,33 +231,32 @@ So let's back up. We've been talking a lot about replacing dependencies with moc
 Why are we replacing dependencies in the first place?
 
 * We'd like the cause of failures to be clear. More dependencies means more places to look for a 
-bug. More places to look means slower diagnoses, and slower diagnoses means users see features and 
-fixes less frequently. 
+bug. More places to look means slower diagnoses, and slower diagnoses means _users see features and 
+fixes less frequently_. 
 * We'd like to have fast feedback cycles. Dependencies can be heavy, like databases or other
-servers which take time to set up, slowing down those cycles. Fast feedback cycles mean we can ship
-to our users more frequently.
+servers which take time to set up, slowing down those cycles. Fast feedback cycles mean we can _ship
+to our users more frequently_.
 * We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
-bugs, which means we can spend more time shipping features over fixes.
+bugs, which means we can _spend more time shipping features over fixes_.
 
 These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
 converge at the same reason. It is the reason we write tests in the first place: to ship more value,
 more quickly (After all, 
-[features which improve safety also improve speed](https://www.hotcars.com/regular-cars-have-these-10-safety-innovations-straight-from-the-race-track/))).
+[features which improve safety also improve speed](https://www.hotcars.com/regular-cars-have-these-10-safety-innovations-straight-from-the-race-track/)).
 Crucially, replacing collaborators with test doubles has an effect directly counter to this end 
 goal: _those replacements aren't what we actually ship_. If you go too far with mocking, what 
 actually happens is that your feedback cycles _slow way down_ because you aren't actually seeing 
-your code as it truly works until you deploy and get it in front of users.
-
-// To solve that you might even think, "well I'll just automate a bunch of tests against my running 
-application." In other words, not isolating individual units at all!
+your code as it truly works until you deploy and get it in front of users. To solve that you might 
+even think, "well I'll just automate a bunch of tests against my running application." In other 
+words, not isolating individual units at all!
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything becomes.
 ([source]((https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)))
 
 This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
 end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9), much 
-like mocks themselves. If think about our testing decisions in terms of value throughput (which is 
-the only thing that matters) instead of the predispositions of the testing models we happen to 
+like mocks themselves. If we think about our testing decisions in terms of value throughput (which 
+is the only thing that matters) instead of the predispositions of the testing models we happen to 
 subscribe to, we end up making very different decisions.
 
 Specifically, **don't replace a dependency unless you have a really good reason to**. 
