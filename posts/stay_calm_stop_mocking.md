@@ -106,8 +106,9 @@ Secondly, tests are repeating the contract of the dependency. That is, as the de
 any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
 more tests, we must again recall how the dependency works, so we stub it the right way. For example,
 if an interface encapsulates some state between subsequent method calls, or a method has some
-preconditions or postconditions, and your stub does not reimplement these correctly, your tests may
-pass even though the system-under-test is not correct.
+preconditions or postconditions, and [your stub does not reimplement these 
+correctly](https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-), 
+your tests may pass even though the system-under-test is not correct (or vice versa).
 
 To remove some of this repetition, some might simply refactor the test setup to be done once in one 
 `@BeforeEach` method for the whole class. But what about the next class that uses this dependency?
@@ -125,9 +126,8 @@ and cohesive implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
-Like aimlessly adding getters and setters _(do I have to write one of these about lombok now?)_, we
-have forgotten the whole point of object-oriented programming is that objects are useful, cohesive 
-abstractions. No wonder OOP gets so much flak.
+Like aimlessly adding getters and setters, we have forgotten the whole point of object-oriented 
+programming is that objects are useful, cohesive abstractions. No wonder OOP gets so much flak.
 
 Consider that test setup often has a higher order semantic meaning mock DSLs end up obfuscating. 
 When we stub an external service call like 
@@ -135,7 +135,7 @@ When we stub an external service call like
 "Account 1 is on credit hold." Rather than reading and writing a mock DSL that speaks in terms of 
 methods and arguments and returning things, we can _name_ this whole concept as a method itself, as 
 in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all developers to 
-reuse (including your future self). This is encapsulation: giving a name to some procedure or 
+reuse (including your future self). *This is encapsulation*: giving a name to some procedure or 
 concept. It builds the [ubiquitous language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
 for your team and your tools. Have some other procedure or concept that comes up while testing? Now 
 you have a place you can name it and reuse it later: a class! I find myself adding and using methods 
@@ -170,19 +170,17 @@ implementation can avoid the filesystem all together with in memory state, and c
 of its methods to quickly make it thread-safe. TODO: appendix about in-memory repositories
 
 Yet we have still only scratched the surface. As the software industry is increasingly concerned
-with instrumenting code for observability and 
-[safe, frequent production rollouts](https://itrevolution.com/book/accelerate/)–effectively, 
-production testability–fakes increasingly make sense as a shipped _feature of our software_ rather
-than merely compiled-away test code. As a feature, fakes work as in-memory, out-of-the-box 
-replacements of complicated external process dependencies and the burdensome configuration and 
-coupling they bring along with them. Running a service can then be effortless by way of a default, 
-in-memory configuration, also called a 
-[hermetic server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically 
-sealed). As a feature, it is one of developer experience, though it still profoundly impacts, if 
-indirectly, customer experience, through safer and faster delivery. In a digital age, you can easily 
-argue a developer that relies on your service is just another customer, anyway. 
+with instrumenting code for observability and [safe, frequent production 
+rollouts](https://itrevolution.com/book/accelerate/), fakes increasingly make sense as a shipped 
+_feature of our software_ rather than merely compiled-away test code. As a feature, fakes work as 
+in-memory, out-of-the-box replacements of complicated external process dependencies and the 
+burdensome configuration and coupling they bring along with them. Running a service can then be 
+effortless by way of a default, in-memory configuration, also called a [hermetic 
+server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically sealed). 
+As a feature, it is one of developer experience, though it still profoundly impacts, if indirectly, 
+customer experience, through safer and faster delivery.
 
-This accessibility is revolutionary: a new teammate can start up your services locally with simple
+This accessibility is revolutionary. A new teammate can start up your services locally with simple
 system setup and one command on their first day. Other teams can realistically use your service, 
 without understanding its ever-evolving internals, in integration testing. Your projects own 
 automated tests can interact with the whole service and retain unit-test-like speed. And it can all 
@@ -215,8 +213,8 @@ so we have to make sure most of our tests only use isolated units, so that most 
 unit tests.
 
 "Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
-devolved. In object-oriented programming's case, it became "class" or "method", and so we became 
-hyperfocused on isolating a class or method under test from all others.
+devolved. Most developers take this to mean "class" or "method", and so we became hyperfocused on 
+isolating a class or method under test from all others.
 
 // Listen to some of these overreactions at the suggestion that we 
 [may be trying too hard to isolate](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html):
@@ -230,39 +228,66 @@ hyperfocused on isolating a class or method under test from all others.
 So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or fakes. 
 Why are we replacing dependencies in the first place?
 
-* We'd like the cause of failures to be clear. More dependencies means more places to look for a 
-bug. More places to look means slower diagnoses, and slower diagnoses means _users see features and 
-fixes less frequently_. 
-* We'd like to have fast feedback cycles. Dependencies can be heavy, like databases or other
-servers which take time to set up, slowing down those cycles. Fast feedback cycles mean we can _ship
-to our users more frequently_.
+* We'd like the cause of failures to be clear. Fewer dependencies means fewer places to look for a 
+bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see features 
+and fixes more frequently_. 
+* We'd like to have fast tests. Dependencies can be heavy, like databases or other
+servers which take time to set up, slowing down the tests and their essential feedback. Replacing 
+those with fast test doubles means faster feedback cycles, which means we can _ship to our users 
+more frequently_.
 * We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
-bugs, which means we can _spend more time shipping features over fixes_.
+bugs. With less bugs to worry about, we can _spend more time shipping features over fixes_.
 
 These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
 converge at the same reason. It is the reason we write tests in the first place: to ship more value,
-more quickly (After all, 
-[features which improve safety also improve speed](https://www.hotcars.com/regular-cars-have-these-10-safety-innovations-straight-from-the-race-track/)).
+more quickly (after all, 
+[features which improve safety also improve speed](https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/)).
 Crucially, replacing collaborators with test doubles has an effect directly counter to this end 
 goal: _those replacements aren't what we actually ship_. If you go too far with mocking, what 
 actually happens is that your feedback cycles _slow way down_ because you aren't actually seeing 
-your code as it truly works until you deploy and get it in front of users. To solve that you might 
-even think, "well I'll just automate a bunch of tests against my running application." In other 
-words, not isolating individual units at all!
+your code as it truly works until you deploy and get it in front of users.
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything becomes.
-([source]((https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)))
+[(source)](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
 
 This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
 end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9), much 
 like mocks themselves. If we think about our testing decisions in terms of value throughput (which 
 is the only thing that matters) instead of the predispositions of the testing models we happen to 
-subscribe to, we end up making very different decisions.
+subscribe to, we end up making very different decisions. Specifically, **don't replace a dependency 
+unless you have a really good reason to**. We've talked about some good examples of when this makes
+sense already: heavy dependencies, like external process integrations. These deserve fakes as 
+described above. Secondly, and equally important, **write your production code so you can reuse as 
+much of it in tests as possible**, especially business logic, of which there is really only one 
+correct implementation by definition. By avoiding doubles at all, you've saved yourself the time
+of reimplementing code you've already written, and your tests aren't lying to you; they actually 
+provide feedback your users care about.
 
-Specifically, **don't replace a dependency unless you have a really good reason to**. 
+// This is the same reason we don't just throw interfaces everywhere even though we might think it
+makes our code more "flexible." Flexibility isn't always _good_; a business rule is a business rule,
+unless your business model specifically models possible alternatives, there is only one correct 
+implementation. If there is only one correct implementation, then what you want is a class, not an
+interface. Incidentally, mocking libraries generally only encourage you to mock interfaces, not
+classes.
 
-* all tests are integration tests
-* rarity of a domain model
+Unit testing, if defined by isolating only your class under test, doesn't exist. [No code exists in
+a vacuum](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In this way, 
+**all tests are integration tests.** Rather than think about unit vs integration vs end to end or 
+whatever, I recommend sticking to Google's [small, medium, and 
+large](https://testing.googleblog.com/2010/12/test-sizes.html) test categorization. If you're 
+getting hives thinking about all the places bugs could lurk without isolating a unit–I used to–ask
+yourself, why are we so comfortable then using the standard library or Apache commons or Guava
+without mocking that code out too? We trust that code. Why? We trust code **that has its own 
+tests.**
+
+The same can be true of our own code. If we organize our code in layers, with business logic deep in
+our domain model, infrastructure defined by interfaces and anti-corruption layers, used by application services in the middle, used by an HTTP adapter on top (or
+whichever protocol for this [port](https://alistair.cockburn.us/hexagonal-architecture/)), each layer
+
+// TODO: diagram this, will be easier to describe 
+
+
+  
 * tests in layers - domain model mostly isolated, then services, then application services, then
 http layer – each layer tests the others, too, but does not focus on them – it's about the contract
 at each layer.
@@ -278,9 +303,6 @@ end up testing a substantial amount of code that never actually runs.
 
 ## Testable code
 
-
-
-## `popularity(x) != value(x, context)`
 
 ## When to Mockito
 
