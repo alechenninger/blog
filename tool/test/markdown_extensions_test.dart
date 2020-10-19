@@ -1,5 +1,6 @@
-import 'package:markdown/markdown.dart';
+import 'package:blogtool/build.dart';
 import 'package:blogtool/src/markdown_extensions.dart';
+import 'package:markdown/markdown.dart';
 import 'package:test/test.dart';
 
 import 'html_matcher.dart';
@@ -222,6 +223,25 @@ since it tests more.
               
               <p><small><sup><a href="#note-2-link" id="note-2">2</a></sup>
               &nbsp;Another footnote. Cool!</small></p>'''));
+    });
+
+    test('additional paragraphs are not considered part of footnote', () {
+      var html = markdownToHtml(r'''test^[1]
+
+^1: test
+
+asdf
+''', inlineSyntaxes: [FootnoteLinkSyntax()], blockSyntaxes: [FootnoteSyntax()]);
+
+      expect(
+          html,
+          sameHtmlAs(
+              r'''<p>test<sup id="note-1-link"><a href="#note-1">1</a></sup></p>
+
+              <p><small><sup><a href="#note-1-link" id="note-1">1</a></sup>
+              &nbsp;test</small></p>
+              
+              <p>asdf</p>'''));
     });
   });
 }

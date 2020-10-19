@@ -98,7 +98,6 @@ class TechnicalTermSyntax extends InlineSyntax {
   }
 }
 
-
 class DefinitionListSyntax extends BlockSyntax {
   /// Matches a line that ends with colon.
   static final _termPattern = RegExp(r'^[ ]{0,3}([^\s].*):[ ]*$');
@@ -176,6 +175,7 @@ class FootnoteLinkSyntax extends InlineSyntax {
   }
 
   static String idFor(note) => 'note-$note';
+
   static String linkIdFor(note) => 'note-$note-link';
 }
 
@@ -200,6 +200,11 @@ class FootnoteSyntax extends BlockSyntax {
     var lines = <String>[];
     lines.add(start[2]);
 
+    bool isNewLineInSameParagraph() =>
+        parser.blockSyntaxes.firstWhere((s) => s.canParse(parser))
+            is ParagraphSyntax &&
+        lines.last.trim().isNotEmpty;
+
     parser.advance();
 
     while (!parser.isDone) {
@@ -212,9 +217,11 @@ class FootnoteSyntax extends BlockSyntax {
         continue;
       }
 
-      if (parser.current.trim().isEmpty ||
-          parser.blockSyntaxes.firstWhere((s) => s.canParse(parser))
-          is ParagraphSyntax) {
+      // Allow empty lines, because line after may be continuation (see
+      // continuation pattern). However is line after is a new paragraph that is
+      // not a continuation, abort as this is not considered part of the
+      // footnote.
+      if (parser.current.trim().isEmpty || isNewLineInSameParagraph()) {
         lines.add(parser.current);
         parser.advance();
       } else {
@@ -234,7 +241,8 @@ class FootnoteSyntax extends BlockSyntax {
     // Make each content node small
     for (var node in content) {
       if (node is! Element) {
-        // not sure about this
+        // Not sure about this. In the past it's meant we have included lines in
+        // content that shouldn't be a part of footnote.
         throw ArgumentError('expected Element node but got $node');
       }
 
