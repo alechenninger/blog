@@ -9,8 +9,11 @@ become so ubiquitous due to the popularity, flexibility, and convenience of mock
 Mockito, [one of the most used Java libraries in the world][mockito-popularity], that I think we may
 have forgotten there are [still more options][mocks-arent-stubs], like their older and wiser cousin,
 the humble {fake}. {Fakes} are "objects [that] actually have working implementations, but usually 
-take some shortcut which makes them not suitable for production (an in memory database is a good 
-example)."^[1]
+take some shortcut which makes them not suitable for production."^[1]
+
+// TODO: maybe this focuses too much on fakes in intro
+
+// TODO: add links to a handful of posts about mocking?
 
 // While "mocking" is an abstract concept, for the remainder of this post I'll use the term mock to
 refer specifically to a mock or stub configured by way of a mocking library like Mockito.
@@ -19,9 +22,9 @@ Fakes may be perceived as heavy and burdensome to implement. However, often thei
 sign of some other problem, such as a missing abstraction, in which case solving the root problem 
 (rather than pasting over it with a mock) not only makes it simpler to implement the fake, but also 
 makes it simpler to evolve the rest of your code that otherwise risks festering into expensive 
-technical debt (if it hasn't already). Other times the initial effort required to implement a fake 
-is unavoidable, but is quickly matched or exceeded by the ensuing value of a persistent class which 
-encapsulates test interaction with a particular dependency.
+technical debt. Other times the initial effort required to implement a fake is unavoidable, but is 
+quickly matched or exceeded by the ensuing value of a persistent class which encapsulates test 
+interaction with a particular dependency. We'll discuss these cases and others.
 
 At the very least, we spend too much of our time writing tests for our toolkit to be monopolized by 
 a single tool. To ensure we're using the right one for the job, let's remind ourselves of a world
@@ -40,13 +43,15 @@ abstractions that evolve as a result.
 
 We forget because the APIs are so nice, but mocking is fascinatingly complex under the hood. It's 
 meta-programming: code that implements types at runtime rather than using native language features
-to implement types at compile time. Implementing types at runtime means you can design a custom 
-means for defining implementation with alternative semantics, defaults, and syntax than the native
-Java way. This can result in an initial convenience that dominates our thinking. For example, with 
-Mockito, we can implement a large interface with one line rather than tens or hundreds implementing 
-every method with a no-op (although to be fair, any IDE can generate the same thing in a second). 
-That said, while less sexy, a compile-time implementation, aside from fewer surprises, has its own 
-conveniences. Let's give those some attention.
+to implement types at compile time. Runtime meta-programming affords the spectacular opportunity to 
+design domain-specific languages (DSLs) that implement types with semantics, defaults, and syntax 
+different from that of the native Java `class`. For example, with Mockito, we can implement a large 
+interface with one line rather than tens or hundreds implementing every method with a no-op 
+(although to be fair, any IDE can generate the same thing in a second). Mockito's API optimizes for 
+immediate convenience–rightfully so–but its this immediate convenience that dominates our thinking. 
+While less sexy, a compile-time implementation, aside from fewer surprises, has its own 
+conveniences. Unfortunately, they are subtle, and easily overlooked. This is not to be confused with
+insignificant–quite the contrary, these "conveniences" are profound. Let's dig in.
 
 // TODO: story of build issues due to mockito runtime agent installation and user OS permissions
 
@@ -83,37 +88,38 @@ To remove some of this repetition, some might simply refactor the test setup to 
 Okay, fine, pull out the test setup into other reusable classes which stub dependencies for you.
 Then, reuse that in each test class.
 
-I've seen this. You know another way to make an implementation of a class reusable so that you don't
-have to constantly reimplement it? That's right: writing a class! No, not the meta-programming way;
-the good ol'-fashioned Java way.
+I've seen this. There is another way to make an implementation of a type reusable so that you don't
+have to constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose 
+class. Classes are built-in to the language to solve precisely this problem of capturing and 
+codifying knowledge for reuse in a stateful type. Not only do classes elegantly save you from 
+reimplementing a contract for many tests, they make implementing those contracts simpler in the 
+first place. Need a place for persistent state within the type? Well, now you have fields of course.
+It's easy to take for granted all the humble class can do for us.
 
-If you aren't convinced writing a class instead of mocking does much to improve the problems 
-mentioned above, I don't blame you. The real power in writing a class is that it is _whole_: a 
+## Object-oriented test double
+
+Yet, classes are still more than that. The real power in writing a class is that it is _whole_: a 
 _whole idea_. It's not just a collection of delicately specific stubs, but a persistent, evolvable 
 and cohesive implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
-Like aimlessly adding getters and setters, we have forgotten the whole point of object-oriented 
-programming is that objects are useful, cohesive abstractions. No wonder OOP gets so much flak.
+Just as when we aimlessly add getters and setters, habitual mocking misses the whole point of 
+object-oriented programming: objects as useful, cohesive abstractions.
 
-Consider that test setup often has a higher order semantic meaning mock DSLs end up obfuscating. 
-When we stub an external service call like 
+For example, test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When
+we stub an external service call like 
 `when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)`, what we are saying is, 
 "Account 1 is on credit hold." Rather than reading and writing a mock DSL that speaks in terms of 
 methods and arguments and returning things, we can _name_ this whole concept as a method itself, as 
 in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all developers to 
-reuse (including your future self). *This is encapsulation*: giving a name to some procedure or 
-concept. It builds the [ubiquitous language][ubiquitous-language] for your team and your tools. Have
-some other procedure or concept that comes up while testing? Now you have a place you can name it 
-and reuse it later: a class! I find myself adding and using methods like these constantly in my 
-tests, and it is incredibly productive. A mock can't do this, because it only works within the 
-confines of an existing production interface.
-
-Above, we discussed that classes save you from reimplementing a contract for many tests. More than
-that, however, they make implementing those contracts simpler in the first place. Need a place for 
-persistent state within the type? Well, now you have fields of course. It's easy to take for granted
-all the humble class can do for us.
+reuse (including your future self). *This is encapsulation*: naming some procedure or concept that 
+we may refer to it later. It builds the [ubiquitous language][ubiquitous-language] for your team and 
+your tools. Having an obvious and discoverable place to capture and reuse a procedure or concept 
+that comes up while testing: *that's* convenience. I find myself adding and using methods like these
+constantly in my tests, further immersing my mind in the problem domain, and it is incredibly 
+productive. A mock can't do this, because it only works within the confines of an existing 
+production interface.
 
 [dont-spy]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13
 [dont-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
@@ -121,6 +127,12 @@ all the humble class can do for us.
 [ubiquitous-language]: https://martinfowler.com/bliki/UbiquitousLanguage.html
 
 ## Fakes as a demonstration
+
+What we're discussing here so far is actually closer to a 
+[{fake}](https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs) 
+than a {stub}. A fake is a complete reimplementation of some interface suitable for testing. As 
+we've described, fakes are often very useful, and deserve a priority slot in our testing toolkit; 
+slots too often monopolized by mocks.
 
 Another way I like to think about a fake is a _demonstration_ of how some type is supposed to work. 
 This serves as a reference implementation, a testbed for experimentation, as well as documentation 
@@ -162,3 +174,111 @@ reconfigured the service to use an in-memory fake. Other dependencies, which nee
 tested, kept their production, external configuration. She was able to hammer some dependencies,
 which were under her control and supervision, while the rest were blissfully undisturbed. Her next 
 release went off without a hitch.
+
+## Fakes vs Reals, or The Futility of Isolation
+
+We humans are innately preoccupied with organizing our thoughts and concepts with ontologies and 
+taxonomies. [Sorting just makes us feel like we're doing something *good* and 
+*productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
+cozy inside just thinking about it.
+
+// TODO: also see https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
+
+Perhaps you a recall of tinge of satisfaction when you've added yet another subpackage inside your 
+Java project?
+
+"Unit" tests–sometimes called "component" tests–in the ontology of testing, isolate a unit of code
+to ensure it functions correctly. We often contrast these with "integration" tests (confusingly, 
+sometimes also called component tests), which test units together, without isolation. We heard 
+writing lots of unit tests is good, because of something about a 
+[pyramid and an ice cream cone][move-fast-don't-break-things],
+so we have to make sure most of our tests only use isolated units, so that most of our tests are 
+unit tests.
+
+"Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
+devolved. Most developers take this to mean "class" or "method", and so we became hyperfocused on 
+isolating a class or method under test from all others.
+
+// Listen to some of these overreactions at the suggestion that we 
+[may be trying too hard to isolate](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html):
+// 
+// * <q>Also it's called unit testing for a reason, testing dependencies is a nono.</q>
+// * <q>The whole point of unit testing is that you are attempting to test a unit of functionality.</q>
+// 
+// Both of these commenters are falling into the same meaningless, circular trap: _"You can't test 
+// dependencies in a unit test because unit tests don't test dependencies."_
+
+So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or 
+fakes. Why are we replacing dependencies in the first place? What about just using the "reals"?
+
+* We'd like the cause of failures to be clear. Fewer dependencies means fewer places to look for a 
+bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see features 
+and fixes more frequently_. 
+* We'd like to have fast tests. Dependencies can be heavy, like databases or other
+servers which take time to set up, slowing down the tests and their essential feedback. Replacing 
+those with fast test doubles means faster feedback cycles, which means we can _ship to our users 
+more frequently_.
+* We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
+bugs. With less bugs to worry about, we can _spend more time shipping features over fixes_.
+
+These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
+converge at the same reason, the reason we write tests in the first place: to ship more value,
+more quickly (after all, 
+[features which improve safety also improve speed](https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/)).
+While replacing collaborators can help as described, replacing collaborators *also* has effects 
+directly counter to this end goal; namely, _those replacements aren't what we actually ship_. If you 
+go too far with mocking, what actually happens is that your feedback cycles _slow way down_ because 
+**you aren't actually seeing your code as it truly works until you deploy and get it in front of 
+users**.
+
+> Mocks are like hard drugs... the more you use, the more separated from reality everything becomes.
+[(source)](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
+
+This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
+end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9), much 
+like mocks themselves. If we think about our testing decisions in terms of value throughput (which 
+is the only thing that matters) instead of the predispositions of the testing models we happen to 
+subscribe to, we end up making very different decisions. Specifically, **don't replace a dependency 
+unless you have a really good reason to**. We've talked about some good examples of when this makes
+sense already: heavy dependencies, like external process integrations. These deserve fakes as 
+described above. Secondly, and equally important, **write your production code so you can reuse as 
+much of it in tests as possible**, especially business logic, of which there is really only one 
+correct implementation by definition. By avoiding doubles at all, you've saved yourself the time
+of reimplementing code you've already written, and your tests aren't lying to you; they actually 
+provide feedback your users care about.
+
+// This is the same reason we don't just throw interfaces everywhere even though we might think it
+makes our code more "flexible." Flexibility isn't always _good_; a business rule is a business rule,
+unless your business model specifically models possible alternatives, there is only one correct 
+implementation. If there is only one correct implementation, then what you want is a class, not an
+interface. Incidentally, mocking libraries generally only encourage you to mock interfaces, not
+classes.
+
+Unit testing, if defined by isolating only your class under test, doesn't exist. [No code exists in
+a vacuum](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In this way, 
+**all tests are integration tests.** Rather than think about unit vs integration vs end to end or 
+whatever, I recommend sticking to Google's [small, medium, and 
+large](https://testing.googleblog.com/2010/12/test-sizes.html) test categorization. If you're 
+getting hives thinking about all the places bugs could lurk without isolating a unit–I used to–ask
+yourself, why are we so comfortable then using the standard library or Apache commons or Guava
+without mocking that code out too? We trust that code. Why? We trust code **that has its own 
+tests.**
+
+The same can be true of our own code. If we organize our code in layers, with business logic deep in
+our domain model, infrastructure defined by interfaces and anti-corruption layers, used by application services in the middle, used by an HTTP adapter on top (or
+whichever protocol for this [port](https://alistair.cockburn.us/hexagonal-architecture/)), each layer
+
+// TODO: diagram this, will be easier to describe 
+
+
+  
+* tests in layers - domain model mostly isolated, then services, then application services, then
+http layer – each layer tests the others, too, but does not focus on them – it's about the contract
+at each layer.
+* what is the harm here? if a test fails, it might be because of a lower layer. so what? you've 
+discovered a bug. add a test for that bug at the appropriate layer and fix it. compare to if you
+isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
+is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
+end up testing a substantial amount of code that never actually runs.
+
+[move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
