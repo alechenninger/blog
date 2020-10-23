@@ -1,43 +1,34 @@
 <meta name="id" content="7799320222051028141">
 <meta name="labels" content="testing,object oriented programming,java,microservices,domain-driven design">
-<meta name="title" content="The secret world of testing without mocking: domain-driven design, fakes, and other patterns to simplify testing in a microservices architecture">
+<meta name="title" content="The secret world of testing without mocking: domain-driven design, fakes, and other patterns to simplify testing in a microservice architecture">
 <meta name="description" content="How to simplify microservice testing through a few simple 
 applications of domain-driven design and in-memory test doubles (fakes).">
 
-Much has been said about mocks, the controversial, swiss-army knife of test doubles. Mocking has
-become so ubiquitous due to the popularity, flexibility, and convenience of mocking libraries like 
-Mockito, [one of the most used Java libraries in the world][mockito-popularity], that I think we may
-have forgotten there are [still more options][mocks-arent-stubs], like their older and wiser cousin,
-the humble {fake}. {Fakes} are "objects [that] actually have working implementations, but usually 
-take some shortcut which makes them not suitable for production."^[1]
-
-// TODO: maybe this focuses too much on fakes in intro
-
-// TODO: add links to a handful of posts about mocking?
+Much has been said about mocks, the controversial, Swiss army knife of test doubles: don't use them
+too much, when to verify state or when to verify interactions, don't test implementation detail, 
+don't mock types you don't own, only mock classes when dealing with legacy code, don't mock complex 
+interfaces; the list goes on. For a tool so easy to misuse, it sure seems like we're using it a lot.
+Mockito is [one of the most used Java libraries in the world][mockito-popularity].
 
 // While "mocking" is an abstract concept, for the remainder of this post I'll use the term mock to
-refer specifically to a mock or stub configured by way of a mocking library like Mockito.
+refer specifically to a mock or stub configured by way of a mocking library like Mockito. Likewise,
+when I refer to Mockito, I really mean any mocking library; Mockito just stands out because it has
+a great API and is–no doubt as a consequence–measurably very popular.
 
-Fakes may be perceived as heavy and burdensome to implement. However, often their "heaviness" is a 
-sign of some other problem, such as a missing abstraction, in which case solving the root problem 
-(rather than pasting over it with a mock) not only makes it simpler to implement the fake, but also 
-makes it simpler to evolve the rest of your code that otherwise risks festering into expensive 
-technical debt. Other times the initial effort required to implement a fake is unavoidable, but is 
-quickly matched or exceeded by the ensuing value of a persistent class which encapsulates test 
-interaction with a particular dependency. We'll discuss these cases and others.
+I was there too, once a frequent Mockito user, perhaps like you are now. Over time however, as my 
+application architectures improved, as I began to introduce [real domain 
+models](http://qala.io/blog/anaemic-architecture-enemy-of-testing.html), the tests I wrote were 
+becoming simpler, easier to add, and services easier to develop. Tricky testing problems that 
+loomed over my head for years now had obvious solutions. My suspicions were true: dropping mocking
+opened me up to a world of solutions I had simply never bothered to look for.
 
-At the very least, we spend too much of our time writing tests for our toolkit to be monopolized by 
-a single tool. To ensure we're using the right one for the job, let's remind ourselves of a world
-without mocks, and stick around long enough to discover the system of incentives, practices, and 
-abstractions that evolve as a result.
-
----
-
-^1: For this and other definitions of test doubles like stubs and fakes, see Martin Fowler's 
-[Mocks Aren't Stubs][mocks-arent-stubs].
+In this post, I demonstrate some compelling and, in my experience, overlooked advantages to mock 
+alternatives. We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
+world without mocking, and the system of incentives, practices, and abstractions that evolve as a 
+result. Whether you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, 
+and try going without for a while. This post will guide you. You may be surprised what you find.
 
 [mockito-popularity]: https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2A-AyhpPBnOc6Ki4kzs3YIJToOADeGjCrrPCo
-[mocks-arent-stubs]: https://martinfowler.com/articles/mocksArentStubs.html
 
 ## The hidden burdens of mocking
 
