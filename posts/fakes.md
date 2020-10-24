@@ -17,10 +17,9 @@ a great API and is–no doubt as a consequence–measurably very popular.
 
 I was there too, once a frequent Mockito user, perhaps like you are now. Over time however, as my 
 application architectures improved, as I began to introduce [real domain 
-models](http://qala.io/blog/anaemic-architecture-enemy-of-testing.html), the tests I wrote were 
-becoming simpler, easier to add, and services easier to develop. Tricky testing problems that 
-loomed over my head for years now had obvious solutions. My suspicions were true: dropping mocking
-opened me up to a world of solutions I had simply never bothered to look for.
+models][anemic-architecture-testing], the tests I wrote were becoming simpler, easier to add, and 
+services easier to develop. Tricky testing problems that loomed over my head for years now had 
+obvious solutions. Much to my surprise, I was barely using Mockito at all.
 
 In this post, I demonstrate some compelling and, in my experience, overlooked advantages to mock 
 alternatives. We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
@@ -29,6 +28,7 @@ result. Whether you are a casual or devout mock-ist, I encourage you to keep cal
 and try going without for a while. This post will guide you. You may be surprised what you find.
 
 [mockito-popularity]: https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2A-AyhpPBnOc6Ki4kzs3YIJToOADeGjCrrPCo
+[anemic-architecture-testing]: http://qala.io/blog/anaemic-architecture-enemy-of-testing.html
 
 ## The hidden burdens of mocking
 
@@ -39,38 +39,47 @@ design domain-specific languages (DSLs) that implement types with semantics, def
 different from that of the native Java `class`. For example, with Mockito, we can implement a large 
 interface with one line rather than tens or hundreds implementing every method with a no-op 
 (although to be fair, any IDE can generate the same thing in a second). Mockito's API optimizes for 
-immediate convenience–rightfully so–but its this immediate convenience that dominates our thinking. 
+immediate convenience–justifiably so–but its this immediate convenience that dominates our thinking. 
 While less sexy, a compile-time implementation, aside from fewer surprises, has its own 
-conveniences. Unfortunately, they are subtle, and easily overlooked. This is not to be confused with
-insignificant–quite the contrary, these "conveniences" are profound. Let's dig in.
+conveniences. Unfortunately, they are subtle and easily overlooked. This is not to be confused with
+insignificant. Quite the contrary, these "conveniences" are profound. Let's dig in.
 
-// TODO: story of build issues due to mockito runtime agent installation and user OS permissions
+// Most times, we don't see the complexity required to implement runtime meta-programming as a 
+// tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
+// leak. Once, a colleague and I spent a while banging our heads against build failures for just one 
+// particular service when we moved our Jenkins server inside a container in an OpenShift 
+// environment. This was the error:
+//
+// ```
+// Caused by: java.io.IOException: well-known file /tmp/.java_pid735 is not secure: file's group should be the current group (which is 0) but the group is 1000330000
+// ```
+// 
+// Obvious, right? 😅 It turned out, if you want to accomplish some particularly scandalous tasks 
+// like mocking final classes, Mockito attaches a Java agent *at runtime.* Because the current 
+// user's group ID didn't match the Java process's group ID, which is due to how user security 
+// inside a container works, the process couldn't attach an agent to itself.
 
 When a class under test has a mocked dependency, the dependency must be stubbed according to the 
-needs of your test.
-
-// Of course, unless you use a spy. But, you're not really supposed to use those. Just [ask 
-Mockito's authors][dont-spy].
-
-We don't want to bother stubbing all the methods out, so we only stub the ones our test needs. 
-Similarly, we don't want to implement state or much logic, so just implement the method say for
-certain arguments, and return some result. Over time, as we add more and more tests, or our classes 
-or dependencies evolve, a few patterns emerge.
+needs of your test. (Of course, unless you use a spy, but you're not really supposed to use 
+those; [just ask Mockito's authors][don't-spy].) We don't want to bother stubbing all the methods 
+out, so we only stub the ones our test needs. Similarly, we don't want to implement state or much 
+logic, so just implement the method say forcertain arguments, and return some result. Over time, as 
+we add more and more tests, or our classes or dependencies evolve, a few patterns emerge.
 
 First of all, in this short-hand stubbing pattern, our tests are [relying on the implementation of 
-our class][dont-overuse-mocks] in subtle ways. By leaving out stubbing some methods, we imply we 
+our class][don't-overuse-mocks] in subtle ways. By leaving out stubbing some methods, we imply we 
 know _what_ methods are used. By only stubbing for certain arguments, we imply we know _how_ those 
-methods are used. If our implementation changes, we may need to update our tests, even though they 
-are still testing the same scenario. Likewise, each time we write a new test, we must recall how the
-dependency is used, so we stub it the right way.
+methods are used. If our [implementation changes, we may need to update our tests][change-detector],
+even though they are still testing the same scenario. Likewise, each time we write a new test, we 
+must recall how the dependency is _used_, so we stub it the right way.
 
 // TODO: example
 
 Secondly, tests are repeating the contract of the dependency. That is, as the dependency changes, 
 any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
-more tests, we must again recall how the dependency works, so we stub it the right way. For example,
-if an interface encapsulates some state between subsequent method calls, or a method has some
-preconditions or postconditions, and [your stub does not reimplement these 
+more tests, we must also recall how the dependency _works_, so we stub it the right way. For 
+example, if an interface encapsulates some state between subsequent method calls, or a method has 
+some preconditions or postconditions, and [your stub does not reimplement these 
 correctly][mocks-are-stupid], your tests may pass even though the system-under-test is not correct 
 (or vice versa).
 
@@ -79,13 +88,23 @@ To remove some of this repetition, some might simply refactor the test setup to 
 Okay, fine, pull out the test setup into other reusable classes which stub dependencies for you.
 Then, reuse that in each test class.
 
-I've seen this. There is another way to make an implementation of a type reusable so that you don't
-have to constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose 
-class. Classes are built-in to the language to solve precisely this problem of capturing and 
-codifying knowledge for reuse in a stateful type. Not only do classes elegantly save you from 
-reimplementing a contract for many tests, they make implementing those contracts simpler in the 
-first place. Need a place for persistent state within the type? Well, now you have fields of course.
-It's easy to take for granted all the humble class can do for us.
+// TODO: example
+
+There is another way to make an implementation of a type reusable so that you don't have to 
+constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose class. 
+Classes are built-in to the language to solve precisely this problem of capturing and codifying 
+knowledge for reuse in a stateful type. Write it once, and it sticks around to help you with the 
+next test. Not only do classes elegantly save you from reimplementing a contract for many tests, 
+they make implementing those contracts simpler in the first place. Need a place for persistent state
+within the type? Well, now you have fields of course. It's easy to take for granted all the humble 
+class can do for us.
+
+// TODO: example
+
+[don't-spy]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13
+[don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
+[change-detector]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
+[mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
 
 ## Object-oriented test double
 
@@ -95,35 +114,40 @@ and cohesive implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
-Just as when we aimlessly add getters and setters, habitual mocking misses the whole point of 
-object-oriented programming: objects as useful, cohesive abstractions.
+Just as when we aimlessly add getters and setters, habitual mocking risks missing the point of 
+object-orientation: objects as reusable, cohesive abstractions.
 
 For example, test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When
-we stub an external service call like 
-`when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)`, what we are saying is, 
-"Account 1 is on credit hold." Rather than reading and writing a mock DSL that speaks in terms of 
-methods and arguments and returning things, we can _name_ this whole concept as a method itself, as 
-in `creditService.placeHoldOn(AccountId.of(1))`. Now this concept is reified for all developers to 
-reuse (including your future self). *This is encapsulation*: naming some procedure or concept that 
-we may refer to it later. It builds the [ubiquitous language][ubiquitous-language] for your team and 
-your tools. Having an obvious and discoverable place to capture and reuse a procedure or concept 
-that comes up while testing: *that's* convenience. I find myself adding and using methods like these
-constantly in my tests, further immersing my mind in the problem domain, and it is incredibly 
-productive. A mock can't do this, because it only works within the confines of an existing 
-production interface.
+we stub an external service call like... 
 
-[dont-spy]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13
-[dont-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
-[mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
+```java
+when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)
+```
+
+What we are saying is, "Account 1 is on credit hold." Rather than reading and writing a mock DSL 
+that speaks in terms of methods and arguments and returning things, we can _name_ this whole concept
+as a method itself, as in 
+
+```java
+creditService.placeHoldOn(AccountId.of(1))
+```
+
+Now this concept is reified for all developers to reuse (including your future self). **This is 
+encapsulation**: naming some procedure or concept that we may refer to it later. It builds the 
+[ubiquitous language][ubiquitous-language] for your team and your tools. Having an obvious and 
+discoverable place to capture and reuse a procedure or concept that comes up while testing: *that's*
+convenience. I find myself adding and using methods like these constantly in my tests, further 
+immersing my mind in the problem domain, and it is incredibly productive. A mock can't do this, 
+because it only works within the confines of an existing production interface.
+
 [ubiquitous-language]: https://martinfowler.com/bliki/UbiquitousLanguage.html
 
 ## Fakes as a demonstration
 
-What we're discussing here so far is actually closer to a 
-[{fake}](https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs) 
-than a {stub}. A fake is a complete reimplementation of some interface suitable for testing. As 
-we've described, fakes are often very useful, and deserve a priority slot in our testing toolkit; 
-slots too often monopolized by mocks.
+What we're discussing here so far is actually closer to a [{fake}][mocks-vs-stubs] than a {stub}. A
+fake is a complete reimplementation of some interface suitable for testing. As we've begun to 
+elucidate, fakes are often very useful, and deserve a priority slot in our testing toolkit; slots 
+too often monopolized by mocks.
 
 Another way I like to think about a fake is a _demonstration_ of how some type is supposed to work. 
 This serves as a reference implementation, a testbed for experimentation, as well as documentation 
@@ -132,31 +156,37 @@ also get its own tests. In fact, if you're clever, you can even test your fake a
 tests as your production implementation–and you should. This ensures that when you use a test double 
 instead of the real thing, you haven't invalidated your tests.
 
-// Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of 
-complexity in test setup, and aren't the focus of most of your tests anyway. For example, they can 
-just ignore solutions for nonvolatile persistence and high-performance concurrency control that we 
-expect of our production persistence abstractions, and which usually require a full database. An 
-implementation can avoid the filesystem all together with in memory state, and can `synchronize` all
-of its methods to quickly make it thread-safe. TODO: appendix about in-memory repositories
+Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of complexity 
+in test setup, and aren't the focus of most of your tests anyway. For example, they can just ignore 
+solutions for nonvolatile persistence and high-performance concurrency control that we expect of our
+production persistence abstractions, and which usually require a full database. An implementation 
+can avoid the filesystem all together with in memory state, and can `synchronize` all of its methods
+to quickly make it thread-safe.
+
+// TODO: appendix about in-memory repositories
+
+[mocks-vs-stubs]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
 
 ## Fakes as a feature
 
-We have still only scratched the surface. As the software industry is increasingly concerned
-with instrumenting code for observability and [safe, frequent production 
-rollouts](https://itrevolution.com/book/accelerate/), fakes increasingly make sense as a shipped 
+As the software industry is increasingly concerned with instrumenting code for observability and 
+[safe, frequent production rollouts][accelerate], fakes increasingly make sense as a shipped 
 _feature of our software_ rather than merely compiled-away test code. As a feature, fakes work as 
 in-memory, out-of-the-box replacements of complicated external process dependencies and the 
 burdensome configuration and coupling they bring along with them. Running a service can then be 
 effortless by way of a default, in-memory configuration, also called a [hermetic 
-server](https://testing.googleblog.com/2012/10/hermetic-servers.html) (as in hermetically sealed). 
-As a feature, it is one of developer experience, though it still profoundly impacts, if indirectly, 
-customer experience, through safer and faster delivery.
+server][hermetic-server] (as in hermetically sealed). As a feature, it is one of developer 
+experience, though it still profoundly impacts, if indirectly, customer experience, through safer 
+and faster delivery, among other things.
 
 This accessibility is revolutionary. A new teammate can start up your services locally with simple
-system setup and one command on their first day. Other teams can realistically use your service, 
-without understanding its ever-evolving internals, in integration testing. Your projects own 
-automated tests can interact with the whole service and retain unit-test-like speed. And it can all 
-be done on airplane-mode.
+system setup and one command on their first day. Other teams can realistically use your service in
+their own testing, without understanding its ever-evolving internals, and without having to rely on
+expensive [enterprise-wide integration testing environments][test-environments], which inevitably 
+[fail to reproduce production anyway][test-in-production]. Additionally, your service's own 
+automated tests can interact with the entire application (testing tricky things like JSON 
+serialization or HTTP error handling) and retain unit-test-like speed. And it can all be done on 
+airplane-mode.
 
 Fakes can even help test operational concerns. A colleague of mine recently needed to load test her
 service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, no 
@@ -165,6 +195,11 @@ reconfigured the service to use an in-memory fake. Other dependencies, which nee
 tested, kept their production, external configuration. She was able to hammer some dependencies,
 which were under her control and supervision, while the rest were blissfully undisturbed. Her next 
 release went off without a hitch.
+
+[accelerate]: https://itrevolution.com/book/accelerate/
+[hermetic-server]: https://testing.googleblog.com/2012/10/hermetic-servers.html
+[test-environments]: https://www.thoughtworks.com/radar/techniques/enterprise-wide-integration-test-environments
+[test-in-production]: https://www.honeycomb.io/blog/testing-in-production/
 
 ## Fakes vs Reals, or The Futility of Isolation
 
