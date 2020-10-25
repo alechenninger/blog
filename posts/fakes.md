@@ -251,14 +251,11 @@ release went off without a hitch.
 [test-environments]: https://www.thoughtworks.com/radar/techniques/enterprise-wide-integration-test-environments
 [test-in-production]: https://www.honeycomb.io/blog/testing-in-production/
 
-## Fakes vs Reals, or The Futility of Isolation
+## The futility of isolation
 
 We humans are innately preoccupied with organizing our thoughts and concepts with ontologies and 
 taxonomies. [Sorting just makes us feel like we're doing something *good* and 
-*productive*.](https://originalcontentbooks.com/blog/organize-things-to-get-more-done) I feel all 
-cozy inside just thinking about it.
-
-// TODO: also see https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
+*productive*.][brain-on-tidiness] I feel all cozy inside just thinking about it.
 
 Perhaps you a recall of tinge of satisfaction when you've added yet another subpackage inside your 
 Java project?
@@ -266,26 +263,31 @@ Java project?
 "Unit" tests–sometimes called "component" tests–in the ontology of testing, isolate a unit of code
 to ensure it functions correctly. We often contrast these with "integration" tests (confusingly, 
 sometimes also called component tests), which test units together, without isolation. We heard 
-writing lots of unit tests is good, because of something about a 
-[pyramid and an ice cream cone][move-fast-don't-break-things],
-so we have to make sure most of our tests only use isolated units, so that most of our tests are 
-unit tests.
-
-"Unit" is intentionally though unfortunately ambiguous, which means naturally, over time, it 
-devolved. Most developers take this to mean "class" or "method", and so we became hyperfocused on 
-isolating a class or method under test from all others.
+writing lots of unit tests is good, because of something about a [pyramid and an ice cream 
+cone][move-fast-don't-break-things], so we have to make sure most of our tests only use isolated 
+units, so that most of our tests are unit tests.
 
 // Listen to some of these overreactions at the suggestion that we 
 [may be trying too hard to isolate](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html):
 // 
-// * <q>Also it's called unit testing for a reason, testing dependencies is a nono.</q>
-// * <q>The whole point of unit testing is that you are attempting to test a unit of functionality.</q>
+// <q>Also it's called unit testing for a reason, testing dependencies is a nono. [...] having [a] 
+test spill outside the unit is not good either. It has just as much potential as mocks to introduce 
+unwanted side-effects.</q>
 // 
-// Both of these commenters are falling into the same meaningless, circular trap: _"You can't test 
-// dependencies in a unit test because unit tests don't test dependencies."_
+// <q>The whole point of unit testing is that you are attempting to test a unit of functionality. A 
+unit is usually understood as a class. However, sometimes the purpose of that class is to interact 
+with files, databases, networks, other classes, etc., and dragging those into your test muddies the 
+water of what a unit is.</q>
+// 
+// <q>If you're unit testing, the code should either be refactored not to reach through so many 
+layers, or the component interactions should be tested piecemeal as _true units_.</q> (my emphasis)
+// 
+// These commenters are falling into the same unfortunate circular trap: _"You can't test 
+dependencies in a unit test because unit tests don't test dependencies."_ These aren't any actual
+reasons to isolate here–isolation is an unjustified, foregone conclusion.
 
 So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or 
-fakes. Why are we replacing dependencies in the first place? What about just using the "reals"?
+fakes. Why are we replacing dependencies in the first place?
 
 * We'd like the cause of failures to be clear. Fewer dependencies means fewer places to look for a 
 bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see features 
@@ -297,31 +299,33 @@ more frequently_.
 * We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
 bugs. With less bugs to worry about, we can _spend more time shipping features over fixes_.
 
-These three [why stacks](https://mikebroberts.com/2003/07/29/popping-the-why-stack/) all eventually
-converge at the same reason, the reason we write tests in the first place: to ship more value,
-more quickly (after all, 
-[features which improve safety also improve speed](https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/)).
-While replacing collaborators can help as described, replacing collaborators *also* has effects 
-directly counter to this end goal; namely, _those replacements aren't what we actually ship_. If you 
-go too far with mocking, what actually happens is that your feedback cycles _slow way down_ because 
-**you aren't actually seeing your code as it truly works until you deploy and get it in front of 
-users**.
+These three [why stacks][why-stacks] all eventually converge at the same reason, the reason we write
+tests in the first place: to ship more value, more quickly (after all, [features which improve 
+safety also improve speed][beyond-ops]). While replacing collaborators can help as described, 
+replacing collaborators *also* has effects directly counter to this end goal. Namely, _those 
+replacements aren't what we actually ship_. If you go too far with mocking, what actually happens is
+that your feedback cycles _slow down_ because **you aren't actually seeing your code as it truly 
+works until you deploy and get it in front of users**. If you don't have good monitoring, the
+situation is even worse: you'd never get the feedback at all!
 
-> Mocks are like hard drugs... the more you use, the more separated from reality everything becomes.
-[(source)](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
+> Mocks are like hard drugs... the more you use, the more separated from reality everything 
+> becomes.^[1]
 
 This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
-end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9), much 
-like mocks themselves. If we think about our testing decisions in terms of value throughput (which 
-is the only thing that matters) instead of the predispositions of the testing models we happen to 
-subscribe to, we end up making very different decisions. Specifically, **don't replace a dependency 
-unless you have a really good reason to**. We've talked about some good examples of when this makes
-sense already: heavy dependencies, like external process integrations. These deserve fakes as 
-described above. Secondly, and equally important, **write your production code so you can reuse as 
-much of it in tests as possible**, especially business logic, of which there is really only one 
-correct implementation by definition. By avoiding doubles at all, you've saved yourself the time
-of reimplementing code you've already written, and your tests aren't lying to you; they actually 
-provide feedback your users care about.
+end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9). If we 
+think about our testing decisions in terms of value throughput (which is the only thing that 
+matters) instead of the predispositions of the testing models we happen to subscribe to, we end up 
+making very different decisions. 
+
+Specifically, **don't replace a dependency unless you have a really good reason to**. We've talked 
+about some good examples of when this makes sense already: heavy dependencies, like external process 
+integrations. These deserve fakes as described above. 
+
+Secondly, and equally important, **write your production code so you can reuse as much of it in 
+tests as possible**, especially business logic, of which there is really only one correct 
+implementation by definition. By avoiding doubles at all, you've saved yourself the time of 
+reimplementing code you've already written and already tested. More importantly, your tests aren't 
+lying to you; they actually provide feedback your users care about.
 
 // This is the same reason we don't just throw interfaces everywhere even though we might think it
 makes our code more "flexible." Flexibility isn't always _good_; a business rule is a business rule,
@@ -357,4 +361,11 @@ isolated the bugged dependency with a stub, you'd never discover the real bug un
 is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
 end up testing a substantial amount of code that never actually runs.
 
+[brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
+[why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
+[beyond-ops]: https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/
+
+---
+
+^1: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
