@@ -225,26 +225,27 @@ _feature of our software_ rather than merely compiled-away test code. As a featu
 in-memory, out-of-the-box replacements of complicated external process dependencies and the 
 burdensome configuration and coupling they bring along with them. Running a service can then be 
 effortless by way of a default, in-memory configuration, also called a [hermetic 
-server][hermetic-server] (as in hermetically sealed). As a feature, it is one of developer 
+server][hermetic-server] (as in "hermetically sealed"). As a feature, it is one of developer 
 experience, though it still profoundly impacts, if indirectly, customer experience, through safer 
-and faster delivery, among other things.
+and faster delivery.
 
-This accessibility is revolutionary. A new teammate can start up your services locally with simple
-system setup and one command on their first day. Other teams can realistically use your service in
-their own testing, without understanding its ever-evolving internals, and without having to rely on
-expensive [enterprise-wide integration testing environments][test-environments], which inevitably 
-[fail to reproduce production anyway][test-in-production]. Additionally, your service's own 
-automated tests can interact with the entire application (testing tricky things like JSON 
-serialization or HTTP error handling) and retain unit-test-like speed. And it can all be done on 
-airplane-mode.
+The ability to quickly and easily start any version of your service with zero external dependencies 
+is game changing. A new teammate can start up your services locally with simple system setup and one
+command on their first day. Other teams can realistically use your service in their own testing, 
+without understanding its ever-evolving internals, and without having to rely on expensive 
+[enterprise-wide integration testing environments][test-environments], which inevitably [fail to 
+reproduce production anyway][test-in-production]. Additionally, your service's own automated tests 
+can interact with the entire application (testing tricky things like JSON serialization or HTTP 
+error handling) and retain unit-test-like speed. And it can all be done on airplane-mode.
 
 Fakes can even help test operational concerns. A colleague of mine recently needed to load test her
 service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, no 
 less). Rather than interrupting and waiting on the team which manages that SaaS, she simply 
-reconfigured the service to use an in-memory fake. Other dependencies, which needed to be load 
-tested, kept their production, external configuration. She was able to hammer some dependencies,
-which were under her control and supervision, while the rest were blissfully undisturbed. Her next 
-release went off without a hitch.
+reconfigured the service to use an in-memory fake. With such a fake you can even set up specific 
+conditions of operation, like slow response times (a bit like a chaos experiment). Meanwhile, other 
+dependencies, which needed to be load tested, kept their production, external configuration. She was
+able to hammer some dependencies, which were under her control and supervision, while the rest were 
+blissfully undisturbed. Her next release went off without a hitch.
 
 [accelerate]: https://itrevolution.com/book/accelerate/
 [hermetic-server]: https://testing.googleblog.com/2012/10/hermetic-servers.html
@@ -267,8 +268,8 @@ writing lots of unit tests is good, because of something about a [pyramid and an
 cone][move-fast-don't-break-things], so we have to make sure most of our tests only use isolated 
 units, so that most of our tests are unit tests.
 
-// Listen to some of these overreactions at the suggestion that we 
-[may be trying too hard to isolate](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html):
+// Listen to some of these overreactions at the suggestion that we [may be trying too hard to 
+isolate][don't-overuse-mocks]:
 // 
 // <q>Also it's called unit testing for a reason, testing dependencies is a nono. [...] having [a] 
 test spill outside the unit is not good either. It has just as much potential as mocks to introduce 
@@ -284,14 +285,14 @@ layers, or the component interactions should be tested piecemeal as _true units_
 // 
 // These commenters are falling into the same unfortunate circular trap: _"You can't test 
 dependencies in a unit test because unit tests don't test dependencies."_ These aren't any actual
-reasons to isolate here–isolation is an unjustified, foregone conclusion.
+reasons to isolate here; isolation is an unjustified, foregone conclusion.
 
 So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or 
 fakes. Why are we replacing dependencies in the first place?
 
 * We'd like the cause of failures to be clear. Fewer dependencies means fewer places to look for a 
-bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see features 
-and fixes more frequently_. 
+bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see 
+features and fixes more frequently_.
 * We'd like to have fast tests. Dependencies can be heavy, like databases or other
 servers which take time to set up, slowing down the tests and their essential feedback. Replacing 
 those with fast test doubles means faster feedback cycles, which means we can _ship to our users 
@@ -306,7 +307,8 @@ replacing collaborators *also* has effects directly counter to this end goal. Na
 replacements aren't what we actually ship_. If you go too far with mocking, what actually happens is
 that your feedback cycles _slow down_ because **you aren't actually seeing your code as it truly 
 works until you deploy and get it in front of users**. If you don't have good monitoring, the
-situation is even worse: you'd never get the feedback at all!
+situation is even worse: you'd never get the feedback at all! Your users could be broken, and you
+may never know.
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
 > becomes.^[1]
@@ -315,34 +317,35 @@ This is why I'm complaining about testing ontologies. Sometimes simplifications 
 end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9). If we 
 think about our testing decisions in terms of value throughput (which is the only thing that 
 matters) instead of the predispositions of the testing models we happen to subscribe to, we end up 
-making very different decisions. 
+making very different decisions:
 
-Specifically, **don't replace a dependency unless you have a really good reason to**. We've talked 
+1. **Don't replace a dependency unless you have a really good reason to**. We've talked 
 about some good examples of when this makes sense already: heavy dependencies, like external process 
-integrations. These deserve fakes as described above. 
+integrations, in which the complexity or time justifies the expense of replacing it. Fakes, as 
+described above, work great here.
 
-Secondly, and equally important, **write your production code so you can reuse as much of it in 
-tests as possible**, especially business logic, of which there is really only one correct 
-implementation by definition. By avoiding doubles at all, you've saved yourself the time of 
-reimplementing code you've already written and already tested. More importantly, your tests aren't 
-lying to you; they actually provide feedback your users care about.
+2. **Write your production code so you can reuse as much of it in tests as possible.** In 
+particular, encapsulate your business logic, of which there is really only one correct 
+implementation by definition, in a reusable class with otherwise injected dependencies. 
+
+By avoiding doubles at all, you've saved yourself the time of reimplementing code you've already 
+written and already tested. More importantly, your tests aren't lying to you; they actually provide 
+meaningful feedback.
 
 // This is the same reason we don't just throw interfaces everywhere even though we might think it
-makes our code more "flexible." Flexibility isn't always _good_; a business rule is a business rule,
+makes our code more "flexible." Flexibility isn't always good. A business rule is a business rule,
 unless your business model specifically models possible alternatives, there is only one correct 
 implementation. If there is only one correct implementation, then what you want is a class, not an
 interface. Incidentally, mocking libraries generally only encourage you to mock interfaces, not
-classes.
+classes–a hint that we should not be mocking business logic.
 
-Unit testing, if defined by isolating only your class under test, doesn't exist. [No code exists in
-a vacuum](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In this way, 
-**all tests are integration tests.** Rather than think about unit vs integration vs end to end or 
-whatever, I recommend sticking to Google's [small, medium, and 
-large](https://testing.googleblog.com/2010/12/test-sizes.html) test categorization. If you're 
-getting hives thinking about all the places bugs could lurk without isolating a unit–I used to–ask
-yourself, why are we so comfortable then using the standard library or Apache commons or Guava
-without mocking that code out too? We trust that code. Why? We trust code **that has its own 
-tests.**
+Unit testing, if defined by isolating a test to only one class, doesn't exist. No code exists in
+a vacuum. In this way, **all tests are integration tests.** Rather than think about unit vs 
+integration vs component vs end to end or whatever, I recommend sticking to Google's [small, medium,
+and large][test-sizes] test categorization. If you're getting hives thinking about all the places 
+bugs could lurk without isolating a unit–I used to–ask yourself, why are we so comfortable then 
+using the standard library or Apache commons or Guava without mocking that code out too? We trust 
+that code. Why? We trust code **that has its own tests.**^[2]
 
 The same can be true of our own code. If we organize our code in layers, with business logic deep in
 our domain model, infrastructure defined by interfaces and anti-corruption layers, used by application services in the middle, used by an HTTP adapter on top (or
@@ -363,9 +366,18 @@ end up testing a substantial amount of code that never actually runs.
 
 [brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
+[don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html)
 [why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
 [beyond-ops]: https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/
+[test-sizes]: https://testing.googleblog.com/2010/12/test-sizes.html
 
 ---
 
 ^1: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
+
+^2: For further exploration of tested or "well understood" as the boundary for "unit" vs 
+"integration" tests, check out the legendary Kent Beck's post, ["Unit" 
+Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In any case, I still
+think his own searching for a definition is further evidence that unit vs integration isn't a 
+productive nomenclature.
+ 
