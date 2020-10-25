@@ -33,8 +33,8 @@ and try going without for a while. This post will guide you. You may be surprise
 ## The hidden burdens of mocking
 
 We forget because the APIs are so nice, but mocking is fascinatingly complex under the hood. It's 
-meta-programming: code that implements types at runtime rather than using native language features
-to implement types at compile time. Runtime meta-programming affords the spectacular opportunity to 
+{metaprogramming}: code that implements types at runtime rather than using native language features
+to implement types at compile time. Runtime metaprogramming affords the spectacular opportunity to 
 design domain-specific languages (DSLs) that implement types with semantics, defaults, and syntax 
 different from that of the native Java `class`. For example, with Mockito, we can implement a large 
 interface with one line rather than tens or hundreds implementing every method with a no-op 
@@ -44,7 +44,7 @@ While less sexy, a compile-time implementation, aside from fewer surprises, has 
 conveniences. Unfortunately, they are subtle and easily overlooked. This is not to be confused with
 insignificant. Quite the contrary, these "conveniences" are profound. Let's dig in.
 
-// Most times, we don't see the complexity required to implement runtime meta-programming as a 
+// Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
 // leak. Once, a colleague and I spent a while banging our heads against build failures for just one 
 // particular service when we moved our Jenkins server inside a container in an OpenShift 
@@ -108,9 +108,9 @@ class can do for us.
 
 ## Object-oriented test double
 
-Yet, classes are still more than that. The real power in writing a class is that it is _whole_: a 
-_whole idea_. It's not just a collection of delicately specific stubs, but a persistent, evolvable 
-and cohesive implementation devoted to the problem of testing.
+Yet, classes are still more than that. Their real power comes from encapsulation. A class is not 
+just a collection of delicately specific stubs, but a persistent, evolvable and cohesive 
+implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
@@ -118,27 +118,39 @@ Just as when we aimlessly add getters and setters, habitual mocking risks missin
 object-orientation: objects as reusable, cohesive abstractions.
 
 For example, test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When
-we stub an external service call like... 
+we stub an external service like... 
 
 ```java
-when(creditService.checkCredit(eq(AccountId.of(1)))).thenReturn(HOLD)
+var creditService = mock(CreditService.class);
+when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
+doThrow(NotEnoughCreditException.class).when(creditService).charge(AccountId.of(1), any(Money.class));
 ```
 
-What we are saying is, "Account 1 is on credit hold." Rather than reading and writing a mock DSL 
-that speaks in terms of methods and arguments and returning things, we can _name_ this whole concept
-as a method itself, as in 
+...what we are really saying is, "Account 1 is on credit hold." Rather than reading and writing a 
+mock DSL that speaks in terms of methods and arguments and returning and throwing things, we can 
+_name_ this whole concept as a method itself.
 
 ```java
+var creditService = new InMemoryCreditService();
 creditService.placeHoldOn(AccountId.of(1))
 ```
 
 Now this concept is reified for all developers to reuse (including your future self). **This is 
 encapsulation**: naming some procedure or concept that we may refer to it later. It builds the 
 [ubiquitous language][ubiquitous-language] for your team and your tools. Having an obvious and 
-discoverable place to capture and reuse a procedure or concept that comes up while testing: *that's*
-convenience. I find myself adding and using methods like these constantly in my tests, further 
-immersing my mind in the problem domain, and it is incredibly productive. A mock can't do this, 
-because it only works within the confines of an existing production interface.
+discoverable  place to capture and reuse a procedure or concept that comes up while testing: 
+*that's* convenience.
+
+// You might argue you could put those two stubbing calls in one similarly named method on a class,
+but what if another test class needs a `CreditService`, now or in the future? Keep in mind, if you
+really wanted, you could still use a mock DSL under the hood of your class, and in that case the 
+difference in upfront effort is completely negligible. That said, you may find at some point it 
+makes sense to start using native class features to implement logic instead of metaprogramming. In 
+fact, this is another advantage of using a class: our tests aren't coupled to whether the thing is a
+mock or whatever; they simply get readable, stable, and reusable test setup.
+
+I find myself adding and using methods like these constantly while testing, further immersing my 
+mind in the problem domain, and it is incredibly productive.
 
 [ubiquitous-language]: https://martinfowler.com/bliki/UbiquitousLanguage.html
 
@@ -156,12 +168,50 @@ also get its own tests. In fact, if you're clever, you can even test your fake a
 tests as your production implementation–and you should. This ensures that when you use a test double 
 instead of the real thing, you haven't invalidated your tests.
 
+```java
+// Example pattern to test a fake and production implementation against same tests
+
+/** Defines the contract of a working repository via tests. */
+abstract class RepositoryContract {
+  SomeAggregateFactory factory = new SomeAggregateFactory();
+
+  abstract Repository repository();
+
+  @Test
+  void savedAggregatesAreRetrievableById() {
+    var aggregate = factory.newAggregate(repository().nextId());
+    repository().save(aggregate);
+    assertEquals(aggregate, repository().byId(aggregate.id()));
+  }
+
+  // etc...
+}
+
+class InMemoryRepositoryTest extends RepositoryContract {
+  InMemoryRepository repository = new InMemoryRepository();
+
+  @Override
+  Repository repository() { return repository; }
+}
+
+class MongoRepositoryTest extends RepositoryContract {
+  @RegisterExtension
+  MongoDb mongoDb = new MongoDb();
+
+  MongoRepository repository = new MongoRepository(mongoDb.database("test"));
+
+  @Override
+  Repository repository() { return repository; }
+}
+```
+
 Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of complexity 
 in test setup, and aren't the focus of most of your tests anyway. For example, they can just ignore 
 solutions for nonvolatile persistence and high-performance concurrency control that we expect of our
-production persistence abstractions, and which usually require a full database. An implementation 
-can avoid the filesystem all together with in memory state, and can `synchronize` all of its methods
-to quickly make it thread-safe.
+production persistence abstractions, and which usually require a full database (such as in the 
+example above, which would require downloading, starting, and managing a MongoDB process). An 
+implementation can avoid the filesystem all together with in memory state, and can `synchronize` all
+of its methods to quickly make it thread-safe.
 
 // TODO: appendix about in-memory repositories
 
