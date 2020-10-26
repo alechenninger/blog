@@ -313,6 +313,10 @@ may never know.
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
 > becomes.^[1]
 
+---
+
+^1: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
+
 ## All tests are integration tests
 
 This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
@@ -385,8 +389,6 @@ time.
 [test-sizes]: https://testing.googleblog.com/2010/12/test-sizes.html
 
 ---
-
-^1: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
 
 ^2: For further exploration of tested or "well understood" as the boundary for "unit" vs 
 "integration" tests, check out the legendary Kent Beck's post, ["Unit" 
