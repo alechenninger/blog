@@ -338,13 +338,6 @@ By avoiding doubles at all, you've saved yourself the time of reimplementing cod
 written and already tested. More importantly, your tests aren't lying to you; they actually provide 
 meaningful feedback.
 
-// This is the same reason we don't just throw interfaces everywhere even though we might think it
-makes our code more "flexible." Flexibility isn't always good. A business rule is a business rule,
-unless your business model specifically models possible alternatives, there is only one correct 
-implementation. If there is only one correct implementation, then what you want is a class, not an
-interface. Incidentally, mocking libraries generally only encourage you to mock interfaces, not
-classes–a hint that we should not be mocking business logic.
-
 Unit testing, if defined by isolating a test to only one class, doesn't exist. No code exists in
 a vacuum. In this way, **all tests are integration tests.** Rather than think about unit vs 
 integration vs component vs end to end or whatever, I recommend sticking to Google's [small, medium,
