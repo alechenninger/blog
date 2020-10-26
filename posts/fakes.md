@@ -252,7 +252,7 @@ blissfully undisturbed. Her next release went off without a hitch.
 [test-environments]: https://www.thoughtworks.com/radar/techniques/enterprise-wide-integration-test-environments
 [test-in-production]: https://www.honeycomb.io/blog/testing-in-production/
 
-## The futility of isolation
+## Rethinking test doubles
 
 We humans are innately preoccupied with organizing our thoughts and concepts with ontologies and 
 taxonomies. [Sorting just makes us feel like we're doing something *good* and 
@@ -313,6 +313,8 @@ may never know.
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
 > becomes.^[1]
 
+## All tests are integration tests
+
 This is why I'm complaining about testing ontologies. Sometimes simplifications of complex spaces 
 end up [thought-terminating](https://en.wikipedia.org/wiki/Thought-terminating_clich%C3%A9). If we 
 think about our testing decisions in terms of value throughput (which is the only thing that 
@@ -344,25 +346,36 @@ a vacuum. In this way, **all tests are integration tests.** Rather than think ab
 integration vs component vs end to end or whatever, I recommend sticking to Google's [small, medium,
 and large][test-sizes] test categorization. If you're getting hives thinking about all the places 
 bugs could lurk without isolating a unit–I used to–ask yourself, why are we so comfortable then 
-using the standard library or Apache commons or Guava without mocking that code out too? We trust 
+using the standard library, or Apache commons, or Guava, without mocking that code out too? We trust 
 that code. Why? We trust code **that has its own tests.**^[2]
 
 The same can be true of our own code. If we organize our code in layers, with business logic deep in
-our domain model, infrastructure defined by interfaces and anti-corruption layers, used by application services in the middle, used by an HTTP adapter on top (or
-whichever protocol for this [port](https://alistair.cockburn.us/hexagonal-architecture/)), each layer
+our domain model, infrastructure defined by interfaces and anti-corruption layers, used by 
+application services in the middle, used by an HTTP adapter on top (or whichever protocol for this 
+[port](https://alistair.cockburn.us/hexagonal-architecture/)), each layer
 
 // TODO: diagram this, will be easier to describe 
 
+The first time you do this, you may feel something is not right. Your application layer tests use
+your domain model, because your application layer does, which means those tests are also 
+transitively testing your domain model. Some of the rules and scenarios may even sound similar to
+scenarios you already described in domain model tests.
 
-  
-* tests in layers - domain model mostly isolated, then services, then application services, then
-http layer – each layer tests the others, too, but does not focus on them – it's about the contract
-at each layer.
-* what is the harm here? if a test fails, it might be because of a lower layer. so what? you've 
-discovered a bug. add a test for that bug at the appropriate layer and fix it. compare to if you
-isolated the bugged dependency with a stub, you'd never discover the real bug until production. what
-is the point of tests if not to discover bugs before production? mocks make it reflexively easy to
-end up testing a substantial amount of code that never actually runs.
+Breathe.
+
+It's not actually redundant. Remember, when you or your teammates writes code against that 
+application service, you expect the class to adhere to its contract; period. This is what your tests
+are testing–that the class implements its contract. How it implements it doesn't matter to your 
+tests, and nor should it matter to you while your working with it (otherwise, how can you hope to
+survive in a complex code base if you have to keep the whole thing in your head?). If a test fails, 
+yes, it's quite possible the problem is in another class. But you should also have tests against 
+that other class. And if this case is missing, great! You found a bug! You wouldn't have found this 
+bug (until–perhaps–production) if you replaced the dependency with a mock. What is the point of 
+tests, then, if not to discover bugs before production?
+
+The redundancy is merely a reflection of the obvious: code relies on other code. And by definition
+that means when we test code, we're (re)testing other code, whether we wrote it or not, all the 
+time.
 
 [brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
@@ -380,4 +393,20 @@ end up testing a substantial amount of code that never actually runs.
 Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In any case, I still
 think his own searching for a definition is further evidence that unit vs integration isn't a 
 productive nomenclature.
+
+## Closing thoughts
+
+* Mostly, tools are not bad or good. We must remember to use them with intention. 
+* Reuse your existing, well-tested implementations where you can. Strive to make your classes
+reusable in tests. Never stub or fake business logic.
+* Start tests from your core types and work outward, focusing on the testing the contract of the 
+class under test. Don't worry if the tests are somehow redundant with other tests–that's a matter
+of implementation. What matters is the class, in conjunction with obedient collaborators, implements
+its own contract.
+* When using the real thing is harmful (such as too complex or slow to set up), ensure you've first 
+isolated through abstraction. Then, fake the abstraction. Write tests that run against both the fake
+and the real implementation to ensure the fake is compliant.
+* Capture common set up scenarios in the language of your problem domain as methods on your fakes.
+* Compile your fakes with your program, and put them behind configuration flags or profiles to 
+enable lightweight modes of execution.
  
