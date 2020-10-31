@@ -44,19 +44,19 @@ and try going without for a while. This post will guide you. You may be surprise
 
 ## The hidden burdens of mocking
 
-We forget because the APIs are so nice, but mocking is fascinatingly complex under the hood. It's 
-{metaprogramming}: code that implements types at runtime rather than using native language features
-to implement types at compile time. Runtime metaprogramming affords the spectacular opportunity to 
-design domain-specific languages (DSLs) that implement types with semantics, defaults, and syntax 
-different from that of the native Java `class`. For example, with Mockito, we can implement a large 
-interface with one line rather than tens or hundreds implementing every method with a no-op 
-(although to be fair, any IDE can generate the same thing in a second).
+We forget because the APIs are so nice, but **mocking is fascinatingly complex under the hood.** 
+It's {metaprogramming}: code that implements types at runtime rather than using native language 
+features to implement types at compile time. Runtime metaprogramming affords the spectacular 
+opportunity to design domain-specific languages (DSLs) that implement types with semantics, 
+defaults, and syntax different from that of the native Java `class`. For example, with Mockito, we 
+can implement a large interface with one line rather than tens or hundreds implementing every method
+with a no-op (although to be fair, any IDE can generate the same thing in a second).
 
-Mockito's API optimizes for immediate convenience–justifiably so–but it's this immediate convenience
-that dominates our thinking. While less sexy, a compile-time implementation, aside from fewer 
-surprises, has its own conveniences. Unfortunately, they are subtle and easily overlooked. This is 
-not to be confused with insignificant. Quite the contrary, these "conveniences" are profound. Let's 
-dig in.
+Mockito's API optimizes for immediate convenience–justifiably so–but **it's this immediate 
+convenience that dominates our thinking.** While less sexy, a compile-time implementation, aside 
+from fewer surprises, has its own conveniences. Unfortunately, they are easily overlooked because 
+they take just a little time and investment in the short term before you can see them. **Let's 
+go ahead and see what happens when we take the time to write out a class.**
 
 // Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
@@ -72,8 +72,6 @@ dig in.
 // like mocking final classes, Mockito attaches a Java agent *at runtime.* Because the current 
 // user's group ID didn't match the Java process's group ID, which is due to how user security 
 // inside a container works, the process was not allowed to attach an agent to itself.
-
-The burdens of mocking have been written about before as we reviewed above. I'll briefly summarize. 
 
 When a class under test has a mocked dependency, the dependency must be stubbed according to the 
 needs of your test. We don't want to bother stubbing all the methods out, so we only stub the ones 
@@ -113,7 +111,7 @@ class OrderServiceTest {
   // snip...
 
   @Test
-  void throwsIfAcccountOnCreditHold() {
+  void throwsIfAccountOnCreditHold() {
       // This works with the current implementation, but what if our implementation 
       // instead changes to just call `charge` instead of first calling `checkCredit`, 
       // relying on the fact that `charge` will throw an exception in this case? The 
@@ -159,10 +157,10 @@ There is another way to make an implementation of a type reusable so that you do
 constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose class. 
 Classes are built-in to the language to solve precisely this problem of capturing and codifying 
 knowledge for reuse in a stateful type. Write it once, and it sticks around to help you with the 
-next test. Not only do classes elegantly save you from reimplementing a contract for many tests, 
-they make implementing those contracts simpler in the first place. Need a place for persistent state
-within the type? Well, now you have fields of course. It's easy to take for granted all the humble 
-class can do for us.
+next test. **Not only do classes elegantly save you from reimplementing a contract for many tests, 
+they make implementing those contracts simpler in the first place.** Need a place for persistent 
+state within the type? Well, now you have fields of course. It's easy to take for granted all the 
+humble class can do for us.
 
 ```java
 // A basic starting point for a "fake" CreditService.
@@ -192,9 +190,9 @@ class InMemoryCreditService implements CreditService {
 
 ## Object-oriented test double
 
-Admittedly, our class isn't all that impressive yet. We're just getting warmed up. A classes real 
-power comes from encapsulation. A class is not just a collection of delicately specific stubs, but a
-persistent, evolvable and cohesive implementation devoted to the problem of testing.
+Admittedly, our class isn't all that impressive yet. We're just getting warmed up. **A classes real 
+power comes from encapsulation.** A class is not just a collection of delicately specific stubs, but
+a persistent, evolvable and cohesive implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
@@ -238,8 +236,8 @@ Using it, our test reads like our business speaks:
 creditService.assumeHoldOn(AccountId.of(1))
 ```
 
-Now this concept is reified for all developers to reuse (including your future self). **This is 
-encapsulation**: naming some procedure or concept that we may refer to it later. It builds the 
+**Now this concept is reified for all developers to reuse (including your future self).** _This is 
+encapsulation: naming some procedure or concept that we may refer to it later. It builds the 
 [ubiquitous language][ubiquitous-language] for your team and your tools. Having an obvious and 
 discoverable place to capture and reuse a procedure or concept that comes up while testing: 
 *that's* convenience.
@@ -260,8 +258,8 @@ Another way I like to think about a fake is a _demonstration_ of how some type i
 This serves as a reference implementation, a testbed for experimentation, as well as documentation 
 for ourselves, our teammates, and our successors. Not only that, but as a class of its own, it can 
 also get its own tests. In fact, if you're clever, you can even test your fake against the same 
-tests as your production implementation–and you should. This ensures that when you use a test double 
-instead of the real thing, you haven't invalidated your tests.
+tests as your production implementation–and you should. **This ensures that when you use a test 
+double instead of the real thing, you haven't invalidated your tests.**
 
 ```java
 // Example pattern to test a fake and production implementation against same tests
@@ -318,8 +316,8 @@ As the software industry is increasingly concerned with instrumenting code for o
 safe, frequent production rollouts, fakes increasingly make sense as a shipped _feature of our 
 software_ rather than merely compiled-away test code. As a feature, fakes work as in-memory, 
 out-of-the-box replacements of complicated external process dependencies and the burdensome 
-configuration and coupling they bring along with them. Running a service can then be effortless by 
-way of a default, in-memory configuration, also called a [hermetic server][hermetic-server] (as in 
+configuration and coupling they bring along with them. **Running a service can then be effortless by 
+way of a default, in-memory configuration**, also called a [hermetic server][hermetic-server] (as in 
 "hermetically sealed"). As a feature, it is one of developer experience, though it still [profoundly
 impacts, if indirectly, customer experience, through safer and faster delivery][accelerate].
 
