@@ -4,16 +4,23 @@
 <meta name="description" content="How to simplify microservice testing through a few simple 
 applications of domain-driven design and in-memory test doubles (fakes).">
 
-Much has been said about mocks, the controversial, Swiss army knife of test doubles: don't use them
-too much, when to verify state or when to verify interactions, don't test implementation detail, 
-don't mock types you don't own, only mock classes when dealing with legacy code, don't mock complex 
-interfaces; the list goes on. For a tool so easy to misuse, it sure seems like we're using it a lot.
-Mockito is [one of the most used Java libraries in the world][mockito-popularity].
+Much has been said about mocks, the controversial, Swiss army knife of test doubles: 
+
+* Don't use them too much [(source)][don't-mock-everything] [(source)][don't-overuse-mocks]
+* Know when to verify state or when to verify interactions [(source)][verify-state-or-interactions]
+* Don't test implementation detail [(source)][change-detector] 
+* Don't mock types you don't own [(source)][don't-mock-third-party-types]
+* Only mock classes when dealing with legacy code [(source)][mock-classes]
+* Don't mock complex interfaces [(source)][service-call-contracts] [(source)][mocks-are-stupid]
+
+...the list goes on. Much of this comes from mock library authors themselves. For a tool so easy to 
+misuse, we're using it quite a lot. Mockito is [one of the most depended-upon Java libraries in the 
+world][mockito-popularity].
 
 // While "mocking" is an abstract concept, for the remainder of this post I'll use the term mock to
 refer specifically to a mock or stub configured by way of a mocking library like Mockito. Likewise,
 when I refer to Mockito, I really mean any mocking library; Mockito just stands out because it has
-a great API and is–no doubt as a consequence–measurably very popular.
+a welcoming API and is–no doubt as a consequence–measurably very popular.
 
 I was there too, once a frequent Mockito user, perhaps like you are now. Over time however, as my 
 application architectures improved, as I began to introduce [real domain 
@@ -27,8 +34,13 @@ world without mocking, and the system of incentives, practices, and abstractions
 result. Whether you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, 
 and try going without for a while. This post will guide you. You may be surprised what you find.
 
-[mockito-popularity]: https://docs.google.com/spreadsheets/u/0/d/1aMNDdk2A-AyhpPBnOc6Ki4kzs3YIJToOADeGjCrrPCo
+[don't-mock-everything]: https://github.com/mockito/mockito/wiki/How-to-write-good-tests#dont-mock-everything-its-an-anti-pattern
+[verify-state-or-interactions]: https://testing.googleblog.com/2013/03/testing-on-toilet-testing-state-vs.html
+[change-detector]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
+[don't-mock-third-party-types]: https://github.com/mockito/mockito/wiki/How-to-write-good-tests#dont-mock-a-type-you-dont-own
+[mockito-popularity]: https://github.com/mockito/mockito/wiki/Mockito-Popularity-and-User-Base
 [anemic-architecture-testing]: http://qala.io/blog/anaemic-architecture-enemy-of-testing.html
+[mock-classes]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#spy
 
 ## The hidden burdens of mocking
 
@@ -38,11 +50,13 @@ to implement types at compile time. Runtime metaprogramming affords the spectacu
 design domain-specific languages (DSLs) that implement types with semantics, defaults, and syntax 
 different from that of the native Java `class`. For example, with Mockito, we can implement a large 
 interface with one line rather than tens or hundreds implementing every method with a no-op 
-(although to be fair, any IDE can generate the same thing in a second). Mockito's API optimizes for 
-immediate convenience–justifiably so–but its this immediate convenience that dominates our thinking. 
-While less sexy, a compile-time implementation, aside from fewer surprises, has its own 
-conveniences. Unfortunately, they are subtle and easily overlooked. This is not to be confused with
-insignificant. Quite the contrary, these "conveniences" are profound. Let's dig in.
+(although to be fair, any IDE can generate the same thing in a second).
+
+Mockito's API optimizes for immediate convenience–justifiably so–but it's this immediate convenience
+that dominates our thinking. While less sexy, a compile-time implementation, aside from fewer 
+surprises, has its own conveniences. Unfortunately, they are subtle and easily overlooked. This is 
+not to be confused with insignificant. Quite the contrary, these "conveniences" are profound. Let's 
+dig in.
 
 // Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
@@ -57,38 +71,89 @@ insignificant. Quite the contrary, these "conveniences" are profound. Let's dig 
 // Obvious, right? 😅 It turned out, if you want to accomplish some particularly scandalous tasks 
 // like mocking final classes, Mockito attaches a Java agent *at runtime.* Because the current 
 // user's group ID didn't match the Java process's group ID, which is due to how user security 
-// inside a container works, the process couldn't attach an agent to itself.
+// inside a container works, the process was not allowed to attach an agent to itself.
+
+The burdens of mocking have been written about before as we reviewed above. I'll briefly summarize. 
 
 When a class under test has a mocked dependency, the dependency must be stubbed according to the 
-needs of your test. (Of course, unless you use a spy, but you're not really supposed to use 
-those; [just ask Mockito's authors][don't-spy].) We don't want to bother stubbing all the methods 
-out, so we only stub the ones our test needs. Similarly, we don't want to implement state or much 
-logic, so just implement the method say forcertain arguments, and return some result. Over time, as 
-we add more and more tests, or our classes or dependencies evolve, a few patterns emerge.
+needs of your test. We don't want to bother stubbing all the methods out, so we only stub the ones 
+our test needs. Similarly, we don't want to implement state or much logic, so just implement the 
+method say for certain arguments, and return some result.
 
-First of all, in this short-hand stubbing pattern, our tests are [relying on the implementation of 
-our class][don't-overuse-mocks] in subtle ways. By leaving out stubbing some methods, we imply we 
+In this short-hand stubbing pattern, our tests are [relying on the implementation of our 
+class][don't-overuse-mocks] in subtle ways. By leaving out stubbing some methods, we imply we 
 know _what_ methods are used. By only stubbing for certain arguments, we imply we know _how_ those 
 methods are used. If our [implementation changes, we may need to update our tests][change-detector],
 even though they are still testing the same scenario. Likewise, each time we write a new test, we 
 must recall how the dependency is _used_, so we stub it the right way.
 
-// TODO: example
+```java
+// A hypothetical anti-corruption layer encapsulating credit.
+// Please forgive the very naive domain model.
+interface CreditService {
+  CreditStatus checkCredit(AccountId account);
+  void charge(AccountId account, Money money);
+}
 
-Secondly, tests are repeating the contract of the dependency. That is, as the dependency changes, 
-any tests stubbing it may need to update to conform to its updated contract. Likewise, as we add 
-more tests, we must also recall how the dependency _works_, so we stub it the right way. For 
-example, if an interface encapsulates some state between subsequent method calls, or a method has 
-some preconditions or postconditions, and [your stub does not reimplement these 
+// A hypothetical domain service which depends on a CreditService
+class OrderService {
+  final CreditService creditService;
+  // snip...
+  
+  void completeOrder(AccountId account, Order order) {
+    // snip...
+    if (HOLD.equals(creditService.checkCredit(account))) {
+      throw new CreditHoldException(account, order);
+    }
+    // snip...
+  }
+}
+
+class OrderServiceTest {
+  // snip...
+
+  @Test
+  void throwsIfAcccountOnCreditHold() {
+      // This works with the current implementation, but what if our implementation 
+      // instead changes to just call `charge` instead of first calling `checkCredit`, 
+      // relying on the fact that `charge` will throw an exception in this case? The 
+      // test will start failing, but actually there is no problem in the production 
+      // code. This test is coupled to implementation detail.
+      when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
+      assertThrows(
+          CreditHoldException.class, 
+          () -> orderService.completeOrder(account1, testOrder));
+  }
+}
+```
+
+We are also repeating the contract of the dependency. That is, as the dependency changes, any tests 
+stubbing it may need to update to conform to its updated contract. Likewise, as we add more tests, 
+we must also recall how the dependency _works_, so we stub it the right way. For example, if an 
+interface encapsulates some state between subsequent method calls, or a method has some 
+preconditions or postconditions, and [your stub does not reimplement these 
 correctly][mocks-are-stupid], your tests may pass even though the system-under-test is not correct 
 (or vice versa).
 
-To remove some of this repetition, some might simply refactor the test setup to be done once in one 
-`@BeforeEach` method for the whole class. But what about the next class that uses this dependency?
-Okay, fine, pull out the test setup into other reusable classes which stub dependencies for you.
-Then, reuse that in each test class.
+To remove some of this repetition, maybe we keep using mocks, but refactor the test setup to be done
+once in a `@BeforeEach` method for the whole class. But what about the next class that uses this 
+dependency? No sweat, pull out the test setup into other reusable classes which stub dependencies 
+for you. Then, reuse that in each test class.
 
-// TODO: example
+```java
+class Mocks {
+  // A factory method for a mock that we can reuse in many test classes.
+  // Note the state of the stub is obscured from our tests, hurting 
+  // readability.
+  static CreditService creditService() {
+    var creditService = mock(CreditService.class);
+    when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
+    doThrow(NotEnoughCreditException.class)
+        .when(creditService).charge(AccountId.of(1), any(Money.class));
+    return creditService;
+  }
+}
+```
 
 There is another way to make an implementation of a type reusable so that you don't have to 
 constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose class. 
@@ -99,18 +164,37 @@ they make implementing those contracts simpler in the first place. Need a place 
 within the type? Well, now you have fields of course. It's easy to take for granted all the humble 
 class can do for us.
 
-// TODO: example
+```java
+// A basic starting point for a "fake" CreditService.
+// It sets the foundation for many improvements, outlined below.
+// You could even use a mock under the hood here, if you wanted.
+// Part of the benefit of a class is that you can change that 
+// over time without breaking your tests.
+class InMemoryCreditService implements CreditService {
+  private Map<AccountId, CreditStatus> accounts =
+      ImmutableMap.of(AccountId.of(1), CreditStatus.HOLD);
 
+  @Override
+  public CreditStatus checkCredit(AccountId account) {
+    return accounts.getOrDefault(account, CreditStatus.OK);
+  }
+
+  @Override
+  public void charge(AccountId account, Money money) {
+    if (CreditStatus.HOLD.equals(checkCredit(account))) {
+      throw new NotEnoughCreditException();
+    }
+  }
+}
+```
 [don't-spy]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13
-[don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
 [change-detector]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
-[mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
 
 ## Object-oriented test double
 
-Yet, classes are still more than that. Their real power comes from encapsulation. A class is not 
-just a collection of delicately specific stubs, but a persistent, evolvable and cohesive 
-implementation devoted to the problem of testing.
+Admittedly, our class isn't all that impressive yet. We're just getting warmed up. A classes real 
+power comes from encapsulation. A class is not just a collection of delicately specific stubs, but a
+persistent, evolvable and cohesive implementation devoted to the problem of testing.
 
 When all you need is a few stubbed methods, mocking libraries are great! **But the convenience of 
 these libraries has made us forget that we can often do much better than a few stubbed methods.** 
@@ -118,12 +202,12 @@ Just as when we aimlessly add getters and setters, habitual mocking risks missin
 object-orientation: objects as reusable, cohesive abstractions.
 
 For example, test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When
-we stub an external service like... 
+we stub an external service as in the example above... 
 
 ```java
-var creditService = mock(CreditService.class);
 when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
-doThrow(NotEnoughCreditException.class).when(creditService).charge(AccountId.of(1), any(Money.class));
+doThrow(NotEnoughCreditException.class)
+    .when(creditService).charge(AccountId.of(1), any(Money.class));
 ```
 
 ...what we are really saying is, "Account 1 is on credit hold." Rather than reading and writing a 
@@ -131,30 +215,41 @@ mock DSL that speaks in terms of methods and arguments and returning and throwin
 _name_ this whole concept as a method itself.
 
 ```java
-var creditService = new InMemoryCreditService();
-creditService.placeHoldOn(AccountId.of(1))
+// Evolving our class to do more for us
+class InMemoryCreditService implements CreditService {
+  private Map<AccountId, CreditStatus> accounts = new LinkedHashMap<>();
+
+  public void assumeHoldOn(AccountId account) {
+    accounts.put(account, CreditStatus.HOLD);
+  }
+
+  @Override
+  public CreditStatus checkCredit(AccountId account) {
+    return accounts.getOrDefault(account, CreditStatus.OK);
+  }
+
+  // charge implementation stays the same...
+}
+```
+
+Using it, our test reads like our business speaks:
+
+```java
+creditService.assumeHoldOn(AccountId.of(1))
 ```
 
 Now this concept is reified for all developers to reuse (including your future self). **This is 
 encapsulation**: naming some procedure or concept that we may refer to it later. It builds the 
 [ubiquitous language][ubiquitous-language] for your team and your tools. Having an obvious and 
-discoverable  place to capture and reuse a procedure or concept that comes up while testing: 
+discoverable place to capture and reuse a procedure or concept that comes up while testing: 
 *that's* convenience.
-
-// You might argue you could put those two stubbing calls in one similarly named method on a class,
-but what if another test class needs a `CreditService`, now or in the future? Keep in mind, if you
-really wanted, you could still use a mock DSL under the hood of your class, and in that case the 
-difference in upfront effort is completely negligible. That said, you may find at some point it 
-makes sense to start using native class features to implement logic instead of metaprogramming. In 
-fact, this is another advantage of using a class: our tests aren't coupled to whether the thing is a
-mock or whatever; they simply get readable, stable, and reusable test setup.
 
 I find myself adding and using methods like these constantly while testing, further immersing my 
 mind in the problem domain, and it is incredibly productive.
 
 [ubiquitous-language]: https://martinfowler.com/bliki/UbiquitousLanguage.html
 
-## Fakes as a demonstration
+## Fakes over stubs
 
 What we're discussing here so far is actually closer to a [{fake}][mocks-vs-stubs] than a {stub}. A
 fake is a complete reimplementation of some interface suitable for testing. As we've begun to 
@@ -220,14 +315,13 @@ of its methods to quickly make it thread-safe.
 ## Fakes as a feature
 
 As the software industry is increasingly concerned with instrumenting code for observability and 
-[safe, frequent production rollouts][accelerate], fakes increasingly make sense as a shipped 
-_feature of our software_ rather than merely compiled-away test code. As a feature, fakes work as 
-in-memory, out-of-the-box replacements of complicated external process dependencies and the 
-burdensome configuration and coupling they bring along with them. Running a service can then be 
-effortless by way of a default, in-memory configuration, also called a [hermetic 
-server][hermetic-server] (as in "hermetically sealed"). As a feature, it is one of developer 
-experience, though it still profoundly impacts, if indirectly, customer experience, through safer 
-and faster delivery.
+safe, frequent production rollouts, fakes increasingly make sense as a shipped _feature of our 
+software_ rather than merely compiled-away test code. As a feature, fakes work as in-memory, 
+out-of-the-box replacements of complicated external process dependencies and the burdensome 
+configuration and coupling they bring along with them. Running a service can then be effortless by 
+way of a default, in-memory configuration, also called a [hermetic server][hermetic-server] (as in 
+"hermetically sealed"). As a feature, it is one of developer experience, though it still [profoundly
+impacts, if indirectly, customer experience, through safer and faster delivery][accelerate].
 
 The ability to quickly and easily start any version of your service with zero external dependencies 
 is game changing. A new teammate can start up your services locally with simple system setup and one
@@ -236,7 +330,7 @@ without understanding its ever-evolving internals, and without having to rely on
 [enterprise-wide integration testing environments][test-environments], which inevitably [fail to 
 reproduce production anyway][test-in-production]. Additionally, your service's own automated tests 
 can interact with the entire application (testing tricky things like JSON serialization or HTTP 
-error handling) and retain unit-test-like speed. And it can all be done on airplane-mode.
+error handling) and retain unit-test-like speed. And you can run them on an airplane.
 
 Fakes can even help test operational concerns. A colleague of mine recently needed to load test her
 service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, no 
@@ -376,7 +470,6 @@ time.
 
 [brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
-[don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html)
 [why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
 [beyond-ops]: https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/
 [test-sizes]: https://testing.googleblog.com/2010/12/test-sizes.html
@@ -405,3 +498,6 @@ and the real implementation to ensure the fake is compliant.
 * Compile your fakes with your program, and put them behind configuration flags or profiles to 
 enable lightweight modes of execution.
  
+[don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
+[mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
+[service-call-contracts]: https://testing.googleblog.com/2018/11/testing-on-toilet-exercise-service-call.html
