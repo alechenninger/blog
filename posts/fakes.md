@@ -28,8 +28,8 @@ models][anemic-architecture-testing], the tests I wrote were becoming simpler, e
 services easier to develop. Tricky testing problems that loomed over my head for years now had 
 obvious solutions. Much to my surprise, I was barely using Mockito at all.
 
-In this post, I demonstrate some compelling and, in my experience, overlooked advantages to mock 
-alternatives. We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
+**In this post, I demonstrate some compelling and, in my experience, overlooked advantages to mock 
+alternatives.** We will explore the origins of mocking, why mocking may have become so ubiquitous, a 
 world without mocking, and the system of incentives, practices, and abstractions that evolve as a 
 result. Whether you are a casual or devout mock-ist, I encourage you to keep calm, open your mind, 
 and try going without for a while. This post will guide you. You may be surprised what you find.
@@ -55,8 +55,8 @@ with a no-op (although to be fair, any IDE can generate the same thing in a seco
 Mockito's API optimizes for immediate convenience–justifiably so–but **it's this immediate 
 convenience that dominates our thinking.** While less sexy, a compile-time implementation, aside 
 from fewer surprises, has its own conveniences. Unfortunately, they are easily overlooked because 
-they take just a little time and investment in the short term before you can see them. **Let's 
-go ahead and see what happens when we take the time to write out a class.**
+they take just a little time and investment in the short term before you can see them. Let's go 
+ahead and see what happens when we take the time to write out a class.
 
 // Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
@@ -94,12 +94,11 @@ interface CreditService {
 }
 
 // A hypothetical domain service which depends on a CreditService
-class OrderService {
+class OrderProcessor {
   final CreditService creditService;
   // snip...
   
-  void completeOrder(AccountId account, Order order) {
-    // snip...
+  void processOrder(AccountId account, Order order) {
     if (HOLD.equals(creditService.checkCredit(account))) {
       throw new CreditHoldException(account, order);
     }
@@ -107,7 +106,7 @@ class OrderService {
   }
 }
 
-class OrderServiceTest {
+class OrderProcessorTest {
   // snip...
 
   @Test
@@ -120,10 +119,15 @@ class OrderServiceTest {
       when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
       assertThrows(
           CreditHoldException.class, 
-          () -> orderService.completeOrder(account1, testOrder));
+          () -> orderService.processOrder(account1, testOrder));
   }
 }
 ```
+
+// Please note the domain model in this blog post is ... not great. A good model incorporates 
+substantial business expertise, and I am no order processing expert. Nor should anyone really be
+[writing their own order processing model in this day and 
+age](https://twitter.com/patio11/status/1321851664551145472?s=20).
 
 We are also repeating the contract of the dependency. That is, as the dependency changes, any tests 
 stubbing it may need to update to conform to its updated contract. Likewise, as we add more tests, 
@@ -227,7 +231,6 @@ class InMemoryCreditService implements CreditService {
   }
 
   // charge implementation stays the same...
-}
 ```
 
 Using it, our test reads like our business speaks:
@@ -236,7 +239,7 @@ Using it, our test reads like our business speaks:
 creditService.assumeHoldOn(AccountId.of(1))
 ```
 
-**Now this concept is reified for all developers to reuse (including your future self).** _This is 
+**Now this concept is reified for all developers to reuse (including your future self).** This is 
 encapsulation: naming some procedure or concept that we may refer to it later. It builds the 
 [ubiquitous language][ubiquitous-language] for your team and your tools. Having an obvious and 
 discoverable place to capture and reuse a procedure or concept that comes up while testing: 
@@ -330,9 +333,9 @@ reproduce production anyway][test-in-production]. Additionally, your service's o
 can interact with the entire application (testing tricky things like JSON serialization or HTTP 
 error handling) and retain unit-test-like speed. And you can run them on an airplane.
 
-Fakes can even help test operational concerns. A colleague of mine recently needed to load test her
-service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, no 
-less). Rather than interrupting and waiting on the team which manages that SaaS, she simply 
+// Fakes can even help test operational concerns. A colleague of mine recently needed to load test 
+her service under certain, hard-to-reproduce conditions involving an external integration (a SaaS, 
+no less). Rather than interrupting and waiting on the team which manages that SaaS, she simply 
 reconfigured the service to use an in-memory fake. With such a fake you can even set up specific 
 conditions of operation, like slow response times (a bit like a chaos experiment). Meanwhile, other 
 dependencies, which needed to be load tested, kept their production, external configuration. She was
@@ -344,7 +347,7 @@ blissfully undisturbed. Her next release went off without a hitch.
 [test-environments]: https://www.thoughtworks.com/radar/techniques/enterprise-wide-integration-test-environments
 [test-in-production]: https://www.honeycomb.io/blog/testing-in-production/
 
-## Rethinking test doubles
+## This is your test. This is your test on drugs.
 
 We humans are innately preoccupied with organizing our thoughts and concepts with ontologies and 
 taxonomies. [Sorting just makes us feel like we're doing something *good* and 
@@ -373,14 +376,14 @@ with files, databases, networks, other classes, etc., and dragging those into yo
 water of what a unit is.</q>
 // 
 // <q>If you're unit testing, the code should either be refactored not to reach through so many 
-layers, or the component interactions should be tested piecemeal as _true units_.</q> (my emphasis)
+layers, or the component interactions should be tested piecemeal as true units.</q>
 // 
-// These commenters are falling into the same unfortunate circular trap: _"You can't test 
-dependencies in a unit test because unit tests don't test dependencies."_ These aren't any actual
+// These commenters are falling into the same unfortunate circular trap: "You can't test 
+dependencies in a unit test because unit tests don't test dependencies." These aren't any actual
 reasons to isolate here; isolation is an unjustified, foregone conclusion.
 
 So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or 
-fakes. Why are we replacing dependencies in the first place?
+fakes. **Why are we replacing dependencies in the first place?**
 
 * We'd like the cause of failures to be clear. Fewer dependencies means fewer places to look for a 
 bug. Fewer places to look means faster diagnoses. If we can fix bugs faster, then _users see 
@@ -392,13 +395,13 @@ more frequently_.
 * We'd like tests to be easy to write, so we can write many, gain lots of confidence, ship less 
 bugs. With less bugs to worry about, we can _spend more time shipping features over fixes_.
 
-These three [why stacks][why-stacks] all eventually converge at the same reason, the reason we write
-tests in the first place: to ship more value, more quickly (after all, [features which improve 
-safety also improve speed][beyond-ops]). While replacing collaborators can help as described, 
-replacing collaborators *also* has effects directly counter to this end goal. Namely, _those 
-replacements aren't what we actually ship_. If you go too far with mocking, what actually happens is
-that your feedback cycles _slow down_ because **you aren't actually seeing your code as it truly 
-works until you deploy and get it in front of users**. If you don't have good monitoring, the
+These three [why stacks][why-stacks] all eventually converge at the same reason, **the reason we 
+write tests in the first place: to ship more value, more quickly** (after all, [features which 
+improve safety also improve speed][beyond-ops]). While replacing collaborators can help as 
+described, replacing collaborators *also* has effects directly counter to this end goal. Namely, 
+those replacements aren't what we actually ship. **If you go too far with mocking, what actually 
+happens is that your feedback cycles slow way down** because you aren't actually seeing your code as 
+it truly works until you deploy and get it in front of users. If you don't have good monitoring, the
 situation is even worse: you'd never get the feedback at all! Your users could be broken, and you
 may never know.
 
@@ -432,45 +435,122 @@ meaningful feedback.
 
 Unit testing, if defined by isolating a test to only one class, doesn't exist. No code exists in
 a vacuum. In this way, **all tests are integration tests.** Rather than think about unit vs 
-integration vs component vs end to end or whatever, I recommend sticking to Google's [small, medium,
-and large][test-sizes] test categorization. If you're getting hives thinking about all the places 
-bugs could lurk without isolating a unit–I used to–ask yourself, why are we so comfortable then 
-using the standard library, or Apache commons, or Guava, without mocking that code out too? We trust 
-that code. Why? We trust code **that has its own tests.**^[2]
+integration vs component vs end to end or whatever, I recommend sticking to Google's pragmatic 
+[small, medium, and large][test-sizes] test categorization.
 
-The same can be true of our own code. If we organize our code in layers, with business logic deep in
-our domain model, infrastructure defined by interfaces and anti-corruption layers, used by 
-application services in the middle, used by an HTTP adapter on top (or whichever protocol for this 
-[port](https://alistair.cockburn.us/hexagonal-architecture/)), each layer
+If you're getting hives thinking about all the places bugs could lurk without isolating a unit–I 
+used to–ask yourself, why are we so comfortable using the standard library, or Apache commons, or 
+Guava, without mocking that code out too? We trust that code. Why? **We trust code that has its 
+own tests.**^[2]
 
-// TODO: diagram this, will be easier to describe 
+The same can be true of our own code. If we organize our code in layers, where each layer depends on
+a well-tested layer beneath it, we rarely need to replace dependencies with test doubles at all.
 
-The first time you do this, you may feel something is not right. Your application layer tests use
-your domain model, because your application layer does, which means those tests are also 
-transitively testing your domain model. Some of the rules and scenarios may even sound similar to
-scenarios you already described in domain model tests.
+<div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s2048/app_architecture.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" height="600" data-original-height="2048" data-original-width="1948" src="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s600/app_architecture.png"/></a></div>
 
-Breathe.
+// This can also be visualized as a hexagon, known as a ["hexagonal" or "ports and 
+adapters" architecture][hexagonal-architecture].
 
-It's not actually redundant. Remember, when you or your teammates writes code against that 
-application service, you expect the class to adhere to its contract; period. This is what your tests
-are testing–that the class implements its contract. How it implements it doesn't matter to your 
-tests, and nor should it matter to you while your working with it (otherwise, how can you hope to
-survive in a complex code base if you have to keep the whole thing in your head?). If a test fails, 
-yes, it's quite possible the problem is in another class. But you should also have tests against 
-that other class. And if this case is missing, great! You found a bug! You wouldn't have found this 
-bug (until–perhaps–production) if you replaced the dependency with a mock. What is the point of 
-tests, then, if not to discover bugs before production?
+You will find tests at each layer may feel redundant. The scenarios will be similar or even the 
+same, and will exercise much of the same code, as lower-layer tests. For example, you might have a 
+test "places order with account in good credit standing" at the application layer invoked via the 
+HTTP transport, at the application services layer invoking these classes directly, and at the domain
+model layer.
 
-The redundancy is merely a reflection of the obvious: code relies on other code. And by definition
-that means when we test code, we're (re)testing other code, whether we wrote it or not, all the 
-time.
+```java
+// Use your production Spring Context, but with an in-memory profile
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("in-memory")
+class ApplicationTest {
+  // snip...
+  
+  @Autowired
+  InMemorySubscriptions subscriptions;
+
+  // A larger test, with broad scope and slow startup due to Spring and 
+  // web server initialization. We're not just testing business logic,
+  // but particularly focused on the transport specifics and application 
+  // wiring.
+  @Test
+  void placesOrderWithAccountInGoodCreditStanding() {
+    // assume some requests to define the subscriptions in an order...
+
+    assertOk(restTemplate.postForEntity(
+        "/v1/orders/1/",
+        new HttpEntity<>(ImmutableMap.of("account", 1)),
+        Map.class));
+    
+    assertThat(subscriptions.forAccount(AccountId.of(1))).hasSize(1);
+  }
+  
+  // Other tests here need not all be business scenarios; they may be
+  // error scenarios, particularly focused on the HTTP specifics like
+  // status codes and serialization, etc.
+}
+
+// Medium tests; fast but still broad.
+// Requires a Spring context for security features, maybe transactions,
+// or metrics, but doesn't require a web server.
+@SpringJUnitConfig
+class OrderApplicationServiceTest {
+  // snip...
+
+  @Test
+  void placesOrderWithAccountInGoodCreditStanding() {
+    var order = orderService.startOrder(Subscription.of("SKU1"))
+    orderService.charge(order.id(), AccountId.of(1));
+    assertThat(subscriptions.forAccount(AccountId.of(1))).hasSize(1);
+  }
+}
+
+// Small test; fast and limited to only our domain model package.
+// Requires no framework.
+class OrderProcessorTest {
+  InMemoryCreditService creditService = new InMemoryCreditService();
+  InMemorySubscriptions subscriptions = new InMemorySubscriptions();
+  OrderProcessor orderProcessor = new OrderProcessor(creditService, subscriptions);
+  OrderFactory orderFactory = new OrderFactory();
+
+  @Test
+  void processesOrderWithAccountInGoodCreditStanding() {
+    var order = orderFactory.startOrder();
+    order.addSubscription(Subscription.of("SKU1"));
+    orderProcessor.process(AccountId.of(1), order);
+    assertThat(subscriptions.forAccount(AccountId.of(1))).hasSize(1);
+  }
+}
+```
+
+I used to fight with my tests really hard to avoid this overlap. 
+
+It was far more trouble than it was worth.
+
+The thing is, these aren't actually that redundant when you think about it. Remember, when you or 
+your teammates writes code against that application service, you expect the class to adhere to its 
+contract; period. This is what your tests are testing–that the class implements its contract. How it
+implements it doesn't matter to your tests, and nor should it matter to you while your working with 
+it (otherwise, how can you hope to survive in a complex code base if you have to keep the whole 
+thing in your head?). If one of these tests fail, yes, it's quite possible the problem is in another
+class. But you should also have tests against that other class. And if this case is missing, great!
+You found a bug! You wouldn't have found this bug (until production, if at all) if you replaced the 
+dependency with a mock, and what is the point of tests if not to discover bugs before production?
+
+I also picked an extreme example. In practice, tests at lower levels get much more detailed, 
+thoroughly testing all branches in your domain objects. Upper layers likely won't be able to reach
+all those branches, and don't really need to try. As a result, you end up with a familiar test 
+pyramid.
+
+What redundancy there is merely a reflection of the obvious: code relies on other code. And by 
+definition that means when we test code, we're (re)testing other code, whether we wrote it or not, 
+all the time. By accepting it, you've freed yourself up to reuse an entire application of code 
+rather than replacing it throughout your tests, and know your tests actually reflect reality^[3].
 
 [brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
 [why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
 [beyond-ops]: https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/
 [test-sizes]: https://testing.googleblog.com/2010/12/test-sizes.html
+[hexagonal-architecture]: https://alistair.cockburn.us/hexagonal-architecture/
 
 ---
 
@@ -480,7 +560,12 @@ Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). 
 think his own searching for a definition is further evidence that unit vs integration isn't a 
 productive nomenclature.
 
-## Closing thoughts
+^3: Admittedly, the only reality is actual production, which is why testing musn't stop at the door
+of prod, but embrace it through monitoring, observability, feature flags, and the like. But there's 
+no reason you shouldn't try to get close to production on your laptop, especially where doing so 
+saves you so much time to boot.
+
+## Closing thoughts 
 
 * Mostly, tools are not bad or good. We must remember to use them with intention. 
 * Reuse your existing, well-tested implementations where you can. Strive to make your classes
