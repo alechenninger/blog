@@ -363,25 +363,6 @@ writing lots of unit tests is good, because of something about a [pyramid and an
 cone][move-fast-don't-break-things], so we have to make sure most of our tests only use isolated 
 units, so that most of our tests are unit tests.
 
-// Listen to some of these overreactions at the suggestion that we [may be trying too hard to 
-isolate][don't-overuse-mocks]:
-// 
-// <q>Also it's called unit testing for a reason, testing dependencies is a nono. [...] having [a] 
-test spill outside the unit is not good either. It has just as much potential as mocks to introduce 
-unwanted side-effects.</q>
-// 
-// <q>The whole point of unit testing is that you are attempting to test a unit of functionality. A 
-unit is usually understood as a class. However, sometimes the purpose of that class is to interact 
-with files, databases, networks, other classes, etc., and dragging those into your test muddies the 
-water of what a unit is.</q>
-// 
-// <q>If you're unit testing, the code should either be refactored not to reach through so many 
-layers, or the component interactions should be tested piecemeal as true units.</q>
-// 
-// These commenters are falling into the same unfortunate circular trap: "You can't test 
-dependencies in a unit test because unit tests don't test dependencies." These aren't any actual
-reasons to isolate here; isolation is an unjustified, foregone conclusion.
-
 So let's back up. We've been talking a lot about replacing dependencies with mocks or stubs or 
 fakes. **Why are we replacing dependencies in the first place?**
 
