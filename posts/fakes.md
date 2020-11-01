@@ -53,10 +53,10 @@ can implement a large interface with one line rather than tens or hundreds imple
 with a no-op (although to be fair, any IDE can generate the same thing in a second).
 
 Mockito's API optimizes for immediate convenience–justifiably so–but **it's this immediate 
-convenience that dominates our thinking.** While less sexy, a compile-time implementation, aside 
-from fewer surprises, has its own conveniences. Unfortunately, they are easily overlooked because 
-they take just a little time and investment in the short term before you can see them. Let's go 
-ahead and see what happens when we take the time to write out a class.
+convenience that dominates our thinking.** While less sexy, a compile-time implementation has its 
+own conveniences. Unfortunately, they are easily overlooked because they take just a little time and
+investment in the short term before you can see them. Let's go ahead and see what happens when we 
+take the time to write out a class.
 
 // Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
@@ -169,9 +169,9 @@ humble class can do for us.
 ```java
 // A basic starting point for a "fake" CreditService.
 // It sets the foundation for many improvements, outlined below.
-// You could even use a mock under the hood here, if you wanted.
-// Part of the benefit of a class is that you can change that 
-// over time without breaking your tests.
+// You could even use a mock under the hood here, if you wanted. Part of the 
+// benefit of a class is that you can change the implementation over time 
+// without breaking your tests.
 class InMemoryCreditService implements CreditService {
   private Map<AccountId, CreditStatus> accounts =
       ImmutableMap.of(AccountId.of(1), CreditStatus.HOLD);
@@ -322,7 +322,7 @@ out-of-the-box replacements of complicated external process dependencies and the
 configuration and coupling they bring along with them. **Running a service can then be effortless by 
 way of a default, in-memory configuration**, also called a [hermetic server][hermetic-server] (as in 
 "hermetically sealed"). As a feature, it is one of developer experience, though it still [profoundly
-impacts, if indirectly, customer experience, through safer and faster delivery][accelerate].
+impacts customer experience through safer and faster delivery][accelerate].
 
 The ability to quickly and easily start any version of your service with zero external dependencies 
 is game changing. A new teammate can start up your services locally with simple system setup and one
@@ -543,7 +543,8 @@ pyramid.
 What redundancy there is merely a reflection of the obvious: code relies on other code. And by 
 definition that means when we test code, we're (re)testing other code, whether we wrote it or not, 
 all the time. By accepting it, you've freed yourself up to reuse an entire application of code 
-rather than replacing it throughout your tests, and know your tests actually reflect reality^[3].
+rather than replacing it throughout your tests, and you know your tests actually reflect 
+reality^[3].
 
 [brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
