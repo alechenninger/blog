@@ -521,6 +521,8 @@ thoroughly testing all branches in your domain objects. Upper layers likely won'
 all those branches, and don't really need to try. As a result, you end up with a familiar test 
 pyramid.
 
+<div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="426" data-original-width="694" src="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png"/></a></div>
+
 What redundancy there is merely a reflection of the obvious: code relies on other code. And by 
 definition that means when we test code, we're (re)testing other code, whether we wrote it or not, 
 all the time. By accepting it, you've freed yourself up to reuse an entire application of code 
@@ -538,11 +540,9 @@ reality^[3].
 
 ^2: For further exploration of tested or "well understood" as the boundary for "unit" vs 
 "integration" tests, check out the legendary Kent Beck's post, ["Unit" 
-Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/). In any case, I still
-think his own searching for a definition is further evidence that unit vs integration isn't a 
-productive nomenclature.
+Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/).
 
-^3: Admittedly, the only reality is actual production, which is why testing musn't stop at the door
+^3: Admittedly, the only reality is actual production, which is why testing mustn't stop at the door
 of prod, but embrace it through monitoring, observability, feature flags, and the like. But there's 
 no reason you shouldn't try to get close to production on your laptop, especially where doing so 
 saves you so much time to boot.
