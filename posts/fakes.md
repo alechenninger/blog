@@ -75,8 +75,7 @@ arguments we expect the class to use.
 However, by leaving out stubbing some methods, we imply we know _what_ methods are used. By only 
 stubbing for certain arguments, we imply we know _how_ those methods are used. If our implementation
 changes, [we may need to update our tests][don't-overuse-mocks], even though the behavior hasn't 
-changed. Likewise, each time we write a new test, we must recall how the dependency is _used_, so we
-stub it the right way.
+changed.
 
 ```java
 // A hypothetical anti-corruption layer encapsulating credit.
@@ -531,8 +530,8 @@ redundant–if the application is otherwise well architected, that's only a matt
 What matters is that the class, in conjunction with obedient collaborators, implements its own 
 contract.
 
-If it's an external process dependency, wrap it in a simple interface, what domain-driven designers 
-may call an "anti-corruption layer", and then implement a fake for it. Write tests that run against 
+If it's an external process dependency, wrap it in a simple interface–what domain-driven designers 
+may call an "anti-corruption layer"–and then implement a fake for it. Write tests that run against 
 both the fake and the real implementation to ensure the fake is compliant. Capture common set up 
 scenarios in the language of your problem domain as methods on your fakes.
 
