@@ -13,9 +13,8 @@ Much has been said about mocks, the controversial, Swiss army knife of test doub
 * Only mock classes when dealing with legacy code [(source)][mock-classes]
 * Don't mock complex interfaces [(source)][service-call-contracts] [(source)][mocks-are-stupid]
 
-...the list goes on. Much of this comes from mock library authors themselves. For a tool so easy to 
-misuse, we're using it quite a lot. Mockito is [one of the most depended-upon Java libraries in the 
-world][mockito-popularity].
+...the list goes on. For a tool so easy to misuse, we're using it quite a lot. Mockito is [one of 
+the most depended-upon Java libraries in the world][mockito-popularity].
 
 // While "mocking" is an abstract concept, for the remainder of this post I'll use the term mock to
 refer specifically to a mock or stub configured by way of a mocking library like Mockito. Likewise,
@@ -66,8 +65,8 @@ we'll start to see how taking the time to write a class can pay off.
 // 
 // Obvious, right? 😅 It turned out, if you want to accomplish some particularly scandalous tasks 
 // like mocking final classes, Mockito attaches a Java agent *at runtime.* Because the current 
-// user's group ID didn't match the Java process's group ID, which is due to how user security 
-// inside a container works, the process was not allowed to attach an agent to itself.
+// user's group ID didn't match the Java process's group ID, which is due to how container security 
+// in OpenShift works, the process was not allowed to attach an agent to itself.
 
 When a class under test has a mocked dependency, the dependency must be stubbed according to the 
 needs of your test. We only stub the methods our class needs for the test, and only for the 
@@ -123,20 +122,20 @@ substantial business expertise, and I am no order processing expert. Nor should 
 [writing their own order processing model in this day and 
 age](https://twitter.com/patio11/status/1321851664551145472?s=20).
 
-Additionally, as the dependency itself changes, any tests stubbing it may need to update to conform 
-to its updated contract, or our tests may no longer be valid. For example, if an interface 
-encapsulates some state between subsequent method calls, or a method has some preconditions or 
-postconditions, and [your stub does not reimplement these correctly][mocks-are-stupid], your tests 
-may pass even though the application will have a bug in production.
+The reverse can also happen: your test passes, but the code actually doesn't work. For example, if 
+an interface encapsulates some state between subsequent method calls, or a method has some 
+preconditions or postconditions, and [your stub does not reimplement these 
+correctly][mocks-are-stupid], your tests may not be valid. That is, mocking also repeats, and is 
+therefore coupled to, how a dependency _works_.
 
-To remove some of this repetition while still using mocks, we can refactor the test setup to be done
-once in a `@BeforeEach` method for the whole class. You can even go one step further and pull out 
-the stubbing into a static method, which can be reused in multiple test classes.
+To remove some of this repetition, we can refactor the test setup to be done once in a `@BeforeEach` 
+method for the whole class. You can even go one step further and pull out the stubbing into a static 
+method, which can be reused in multiple test classes.
 
 ```java
 class Mocks {
   // A factory method for a mock that we can reuse in many test classes.
-  // Note the state of the stub is obscured from our tests, hurting 
+  // Note however the state of the stub is obscured from our tests, hurting 
   // readability.
   static CreditService creditService() {
     var creditService = mock(CreditService.class);
@@ -158,9 +157,9 @@ they make implementing those contracts simpler in the first place.**
 ```java
 // A basic starting point for a "fake" CreditService.
 // It sets the foundation for many improvements, outlined below.
-// You could even use a mock under the hood here, if you wanted. Part of the 
-// benefit of a class is that you can change the implementation over time 
-// without breaking your tests.
+// You could even use a mock under the hood here, if you wanted, and change it
+// later. Part of the benefit of a class is that you can change the implementation 
+// over time without breaking your tests.
 class InMemoryCreditService implements CreditService {
   private Map<AccountId, CreditStatus> accounts =
       ImmutableMap.of(AccountId.of(1), CreditStatus.HOLD);
@@ -241,20 +240,18 @@ problem domain, and it is incredibly productive.
 
 ## Fakes over stubs
 
-What we're discussing here so far is actually closer to a [{fake}][mocks-vs-stubs] than a {stub}. 
-You've used a fake any time you've tested with an in-memory database. A fake is a complete 
-implementation of some interface suitable for testing. As we've begun to elucidate, fakes are often 
-very useful, and deserve a priority slot in our testing toolkit; slots too often monopolized by 
-mocks.
+As your class becomes more complete, it'll start to look more like a [{fake}][mocks-vs-stubs] than a
+{stub}. You've used a fake any time you've tested with an in-memory database. A fake is a complete 
+implementation of some interface suitable for testing.
 
-As your class becomes more complete, it'll start to look more like a fake. What sets a fake apart 
-really is that it usually has its own tests. **This ensures that when you use a test double instead 
-of the real thing, you haven't invalidated your tests.** In this way, a fake also becomes a 
-demonstration of how some type is supposed to work. It's a reference implementation, a testbed for 
-experimentation, as well as documentation for ourselves, our teammates, and our successors. 
+Any time you replace a non-trivial dependency, you should really ensure that replacement has its own 
+tests. **This ensures that when you use a test double instead of the real thing, you haven't 
+invalidated your tests.** In this way, a fake also becomes a demonstration of how some type is 
+supposed to work. It's a reference implementation, a testbed for experimentation, as well as 
+documentation for ourselves, our teammates, and our successors. 
 
 If you're clever, you can even reuse the same tests as your production implementation–and you 
-should. It saves you time and gives you confidence. 
+absolutely should. It saves you time and gives you confidence. 
 
 ```java
 // Example pattern to test a fake and production implementation against same tests
@@ -523,21 +520,27 @@ of prod, but embrace it through monitoring, observability, feature flags, and th
 no reason you shouldn't try to get close to production on your laptop, especially where doing so 
 saves you so much time to boot.
 
-## Closing thoughts 
+## Summary
 
-* Mostly, tools are not bad or good. We must remember to use them with intention. 
-* Reuse your existing, well-tested implementations where you can. Strive to make your classes
-reusable in tests. Never stub or fake business logic.
-* Start tests from your core types and work outward, focusing on the testing the contract of the 
-class under test. Don't worry if the tests are somehow redundant with other tests–that's a matter
-of implementation. What matters is the class, in conjunction with obedient collaborators, implements
-its own contract.
-* When using the real thing is harmful (such as too complex or slow to set up), ensure you've first 
-isolated through abstraction. Then, fake the abstraction. Write tests that run against both the fake
-and the real implementation to ensure the fake is compliant.
-* Capture common set up scenarios in the language of your problem domain as methods on your fakes.
-* Compile your fakes with your program, and put them behind configuration flags or profiles to 
-enable lightweight modes of execution.
+It's not to say mocks don't have their place, but many business applications benefit from a simpler
+world: a world without mocks. In fact, in the simplest world, you'd reuse all the implementations 
+you've already written.
+
+Focusing on the testing the contract of the class under test. Don't worry if the tests are somehow 
+redundant–if the application is otherwise well architected, that's only a matter of implementation. 
+What matters is that the class, in conjunction with obedient collaborators, implements its own 
+contract.
+
+If it's an external process dependency, wrap it in a simple interface, what domain-driven designers 
+may call an "anti-corruption layer", and then implement a fake for it. Write tests that run against 
+both the fake and the real implementation to ensure the fake is compliant. Capture common set up 
+scenarios in the language of your problem domain as methods on your fakes.
+
+Finally, compile your fakes with your program, and put them behind configuration flags or profiles 
+to enable lightweight modes of execution.
+
+Most of all, don't get too complacent with your usual solutions or tools. Change it up. You never
+know what new world you may discover.
  
 [don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
 [mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
