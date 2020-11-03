@@ -4,3 +4,4 @@
 pubspec.lock
 out/
 client.json
+.DS_Store
