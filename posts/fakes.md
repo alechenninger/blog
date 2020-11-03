@@ -377,7 +377,7 @@ described above, work great here.
 
 2. **Write your production code so you can reuse as much of it in tests as possible.** In 
 particular, encapsulate your business logic, of which there is really only one correct 
-implementation by definition, in a reusable class with otherwise injected dependencies. 
+implementation by definition, in reusable classes with injected dependencies. 
 
 By avoiding doubles at all, you've saved yourself the time of reimplementing code you've already 
 written and already tested. More importantly, your tests aren't lying to you; they actually provide 
@@ -395,7 +395,7 @@ own tests.**^[2]
 
 The same can be true of our own code. If we organize our code in layers, where each layer depends on
 a well-tested layer beneath it, we rarely need to replace dependencies with test doubles at all. The
-bug shouldn't be there, because we've tested it, mitigating one of the "cons" of integration.
+bug shouldn't be _there_, because we've tested _there_, mitigating one of the "cons" of integration.
 
 <div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s2048/app_architecture.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" height="600" data-original-height="2048" data-original-width="1948" src="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s600/app_architecture.png"/></a></div>
 
