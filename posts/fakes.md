@@ -248,7 +248,8 @@ implementation of some interface suitable for testing.
 
 Any time you replace a non-trivial dependency, you should really ensure that replacement has its own
 tests. **This ensures that when you use a test double instead of the real thing, you haven't 
-invalidated your tests.** If you're clever, you can even reuse the same tests as your production implementation–and you absolutely should. It saves you time and gives you confidence. 
+invalidated your tests.** If you're clever, you can even reuse the same tests as your production 
+implementation–and you absolutely should. It saves you time and gives you confidence. 
 
 In this way, a fake also becomes a demonstration of how some type is supposed to work. It's can 
 become a kind of reference implementation and testbed, serving as documentation for ourselves, our 
@@ -303,7 +304,8 @@ all of its methods to quickly make it thread-safe.
 
 ## Fakes as a feature
 
-As the software industry is increasingly concerned with safe, frequent production rollouts, fakes increasingly make sense as a shipped _feature of our software_ rather than merely compiled-away test 
+As the software industry is increasingly concerned with safe, frequent production rollouts, fakes 
+increasingly make sense as a shipped _feature of our software_ rather than merely compiled-away test 
 code. As a feature, fakes work as in-memory, out-of-the-box replacements of complicated external 
 process dependencies and the burdensome configuration and coupling they bring along with them. 
 **Running a service can then be effortless by way of a default, in-memory configuration**, also 
@@ -500,8 +502,10 @@ if you replaced the dependency with a mock, and what is the point of tests if no
 before production?
 
 I also illustrated the worst of it. In practice, tests at lower levels get much more detailed than
-upper levels, thoroughly testing all branches in your domain objects, since that's where most of your business logic is (or should be) anyway. Individual upper layers likely won't be able to reach all those branches, and don't really need to try. As a result, you end up with a familiar test pyramid, 
-with lots of small, fast tests, and fewer larger, slow tests.
+upper levels, thoroughly testing all branches in your domain objects, since that's where most of 
+your business logic is (or should be) anyway. Individual upper layers likely won't be able to reach 
+all those branches, and don't really need to try. As a result, you end up with a familiar test 
+pyramid, with lots of small, fast tests, and fewer larger, slow tests.
 
 <div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="426" data-original-width="694" src="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png"/></a></div>
 
