@@ -26,7 +26,8 @@ void main(List<String> arguments) async {
     ..addCommand(Build())
     ..addCommand(Watch())
     ..addCommand(Preview())
-    ..addCommand(Lookup());
+    ..addCommand(Lookup())
+    ..addCommand(Publish());
 
   await runner.run(arguments);
 
