@@ -534,9 +534,9 @@ saves you so much time to boot.
 
 ## Summary
 
-It's not to say mocks don't have their place, but many business applications benefit from a simpler
-world: a world without mocks. In fact, in the simplest world, you'd reuse all the implementations 
-you've already written.
+It's not to say mocks don't have their place, but many applications benefit from a simpler world: a 
+world without mocks. In fact, in the simplest world, you'd reuse all the implementations you've 
+already written.
 
 Focus on the testing the contract of the class under test. Don't worry if the tests are somehow 
 redundant. If the application is otherwise well architected, that's only a matter of implementation. 
