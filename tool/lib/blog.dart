@@ -92,12 +92,12 @@ class Blog {
     return PostResult(response.id, response.url);
   }
 
-  Future<void> publishPost(RenderedPost post) async {
-    if (post.id == null) {
-      throw ArgumentError.notNull('post.id');
+  Future<void> publishPost(String postId) async {
+    if (postId == null) {
+      throw ArgumentError.notNull('postId');
     }
 
-    var response = await _api.posts.publish(blogId, post.id);
+    var response = await _api.posts.publish(blogId, postId);
 
     return PostResult(response.id, response.url);
   }

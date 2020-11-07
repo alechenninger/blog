@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:blogtool/build.dart';
-import 'package:blogtool/publish.dart';
+import 'package:blogtool/blog.dart';
 import 'package:cli_util/cli_logging.dart';
 import 'package:file/local.dart';
 import 'package:file/src/interface/directory.dart';
@@ -90,7 +90,7 @@ class Build extends Command<void> {
       var post = entity as File;
       var builtPost = await render(post, out);
 
-      built.add(builtPost.path);
+      built.add(builtPost.htmlPath);
     }
 
     progress.finish(message: '${built}');
@@ -150,7 +150,7 @@ class Preview extends Command<void> {
     var out = await prepareOut(fs);
 
     var rendered = await render(post, out);
-    await _uploadDraft(rendered);
+    await uploadDraft(_blog, rendered);
 
     var progress = logger.progress('Watching $post for changes');
 
@@ -159,7 +159,7 @@ class Preview extends Command<void> {
       progress.finish(message: '${event.path} changed');
       var rendered = await render(post, out);
       logger.stderr('${rendered} updated');
-      await _uploadDraft(rendered);
+      await uploadDraft(_blog, rendered);
     }
 
     await for (var event in post.watch()) {
@@ -168,30 +168,6 @@ class Preview extends Command<void> {
       }
 
       progress = logger.progress('Watching $post for changes');
-    }
-  }
-
-  Future _uploadDraft(BuiltPost builtPost) async {
-    var progress = logger.progress('Uploading draft');
-
-    var rendered = RenderedPost(builtPost.htmlContent);
-
-    if (!rendered.isNewPost) {
-      var result = await _blog.updatePost(rendered);
-
-      progress.finish(message: 'Done!', showTiming: true);
-
-      logger.stdout('Preview your post here: ${result.previewUrl}');
-    } else {
-      var result = await _blog.startNewPost(post: rendered);
-
-      progress.finish(message: 'Done!', showTiming: true);
-
-      await builtPost.originalFile
-          .writeAsString('''<meta name="id" content="${result.id}">
-${builtPost.originalContent}''', flush: true);
-
-      logger.stdout('Preview your post here: ${result.previewUrl}');
     }
   }
 }
@@ -205,7 +181,17 @@ class Publish extends Command<void> {
 
   @override
   FutureOr<void> run() async {
-    var blog = await loadBlog();
+    var post = fs.file(argResults.rest[0]);
+
+    var loadingBlog = loadBlog();
+    var preparingOut = prepareOut(fs);
+
+    var blog = await loadingBlog;
+    var out = await preparingOut;
+    var rendered = await render(post, out);
+
+    var result = await uploadDraft(blog, rendered);
+    await blog.publishPost(result.id);
   }
 }
 
@@ -256,6 +242,33 @@ Future<BuiltPost> render(File post, Directory out) async {
   return BuiltPost(post, builtPost, contents, html);
 }
 
+Future<PostResult> uploadDraft(Blog blog, BuiltPost builtPost) async {
+  var progress = logger.progress('Uploading draft');
+  var rendered = RenderedPost(builtPost.htmlContent);
+
+  PostResult result;
+
+  if (!rendered.isNewPost) {
+    result = await blog.updatePost(rendered);
+
+    progress.finish(message: 'Done!', showTiming: true);
+
+    logger.stdout('Preview your post here: ${result.previewUrl}');
+  } else {
+    result = await blog.startNewPost(post: rendered);
+
+    progress.finish(message: 'Done!', showTiming: true);
+
+    await builtPost.originalFile
+        .writeAsString('''<meta name="id" content="${result.id}">
+${builtPost.originalContent}''', flush: true);
+
+    logger.stdout('Preview your post here: ${result.previewUrl}');
+  }
+
+  return result;
+}
+
 // TODO: BuiltPost and RenderedPost should be combined
 class BuiltPost {
   final File originalFile;
@@ -269,6 +282,8 @@ class BuiltPost {
 
   const BuiltPost(
       this.originalFile, this.htmlFile, this.originalContent, this.htmlContent);
+
+  RenderedPost toRenderedPost() => RenderedPost(htmlContent);
 }
 
 Future<Blog> loadBlog() async {
