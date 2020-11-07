@@ -8,7 +8,7 @@ Much has been said about mocks, the controversial, Swiss army knife of test doub
 
 * Don't use them too much [(source)][don't-mock-everything] [(source)][don't-overuse-mocks]
 * Know when to use them at all [(source)][verify-state-or-interactions]
-* Don't test implementation detail [(source)][change-detector] 
+* Don't use them to test implementation detail [(source)][change-detector] 
 * Don't mock types you don't own [(source)][don't-mock-third-party-types]
 * Only mock classes when dealing with legacy code [(source)][mock-classes]
 * Don't mock complex interfaces [(source)][service-call-contracts] [(source)][mocks-are-stupid]
@@ -16,10 +16,10 @@ Much has been said about mocks, the controversial, Swiss army knife of test doub
 ...the list goes on. For a tool so easy to misuse, we're using it quite a lot. Mockito is [one of 
 the most depended-upon Java libraries in the world][mockito-popularity].
 
-// While "mocking" is an abstract concept, for the remainder of this post I'll use the term mock to
-refer specifically to a mock or stub configured by way of a mocking library like Mockito. Likewise,
-when I refer to Mockito, I really mean any mocking library; Mockito just stands out because it has
-a welcoming API and is–no doubt as a consequence–measurably very popular.
+// While "mocking" is an abstract concept, for the remainder of this post I'll use the term {mock} 
+to refer specifically to a mock or stub configured by way of a mocking library like Mockito. 
+Likewise, when I refer to Mockito, I really mean any mocking library; Mockito just stands out 
+because it has a welcoming API and is–no doubt as a consequence–measurably very popular.
 
 I was there too, once a frequent Mockito user, perhaps like you are now. Over time however, as my 
 application architectures improved, as I began to introduce [real domain 
@@ -65,8 +65,9 @@ mocking pitfalls, we'll start to see how taking the time to write a class can pa
 // 
 // Obvious, right? 😅 It turned out, if you want to accomplish some particularly scandalous tasks 
 // like mocking final classes, Mockito attaches a Java agent *at runtime.* Because the current 
-// user's group ID didn't match the Java process's group ID, which is due to how container security 
-// in OpenShift works, the process was not allowed to attach an agent to itself.
+// user's group ID didn't match the Java process's group ID (an otherwise uninteresting detail of 
+// the environment, at least to us mere developers), the process was not allowed to attach an agent 
+// to itself.
 
 When a class under test has a mocked dependency, the dependency must be stubbed according to the 
 needs of your test. We only stub the methods our class needs for the test, and only for the 
@@ -149,7 +150,7 @@ class Mocks {
 ```
 
 There is another way to make an implementation of a type reusable so that you don't have to 
-constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose class. 
+constantly reimplement it: the familiar, tool-assisted, keyword-supported, fit-for-purpose *class*. 
 Classes are built-in to the language to solve precisely this problem of capturing and codifying 
 knowledge for reuse in a stateful type. Write it once, and it sticks around to help you with the 
 next test. **Not only do classes elegantly save you from reimplementing a contract for many tests, 
@@ -307,11 +308,11 @@ all of its methods to quickly make it thread-safe.
 As the software industry is increasingly concerned with safe, frequent production rollouts, fakes 
 increasingly make sense as a shipped _feature of our software_ rather than merely compiled-away test 
 code. As a feature, fakes work as in-memory, out-of-the-box replacements of complicated external 
-process dependencies and the burdensome configuration and coupling they bring along with them. 
-**Running a service can then be effortless by way of a default, in-memory configuration**, also 
-called a [hermetic server][hermetic-server] (as in "hermetically sealed"). As a feature, it is one 
-of developer experience, though it still [profoundly impacts customer experience through safer and 
-faster delivery][accelerate].
+process dependencies–dependencies which may not even yet be specified–and the burdensome 
+configuration and coupling they bring along with them. **Running a service can then be effortless by 
+way of a default, in-memory configuration**, also called a [hermetic server][hermetic-server] (as in 
+"hermetically sealed"). As a feature, it is one of developer experience, though it still [profoundly 
+impacts customer experience through safer and faster delivery][accelerate].
 
 The ability to quickly and easily start any version of your service with zero external dependencies 
 is game changing. A new teammate can start up your services locally with simple system setup and one
@@ -338,15 +339,14 @@ blissfully undisturbed. Her next release went off without a hitch.
 
 ## This is your test. This is your test on drugs.
 
-"Unit" tests–sometimes called "component" tests–in the ontology of testing, isolate a unit of code
+"Unit" tests (sometimes called "component" tests) in the ontology of testing, isolate a unit of code
 to ensure it functions correctly. We often contrast these with "integration" tests (confusingly, 
 sometimes also called component tests), which test units together, without isolation. We heard 
 writing lots of unit tests is good, because of something about a [pyramid and an ice cream 
 cone][move-fast-don't-break-things], so we have to make sure most of our tests only use isolated 
 units, so that most of our tests are unit tests.
 
-So let's back up. **Why are we replacing dependencies in order to "isolate units" in the first 
-place?**
+So let's back up. **Why are we replacing dependencies and "isolating units" in the first place?**
 
 * With stubbed dependencies, there are fewer places to look when there is a test failure. This means 
 we can fix bugs faster, so we can _ship to our users more frequently_.
@@ -358,17 +358,22 @@ These two [why stacks][why-stacks] all eventually converge at the same reason, *
 write tests in the first place: to ship more value, more quickly** (after all, [features which 
 improve safety also improve speed][beyond-ops]). While replacing collaborators can help as 
 described, replacing collaborators *also* has effects directly counter to this end goal. That is,
-because those replacements aren't what we actually ship, **when you replace dependencies, your 
-feedback cycles actually slow down** because you aren't actually seeing your code as it truly works 
-until you deploy and get it in front of users. If you don't have good monitoring, you may not even 
-see it then.
+**when you replace dependencies, your feedback cycles actually slow down** because those 
+replacements *aren't what we actually ship*. You aren't ever seeing your code as it truly works 
+until you deploy and get it in front of users^[1]. If you don't have good monitoring, you may not even 
+see it work–or not!–then.
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
-> becomes.^[1]
+> becomes.^[2]
 
 ---
 
-^1: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
+^1: You can make the argument that regardless of how you test, production is still the only place
+you see how your code "truly works." The slightly more nuanced story is that how "close to truth" 
+your tests are is a spectrum, and it's obviously advantageous to be closer to truth than not, all 
+else equal. We'll touch on this more below. 
+
+^2: Thank you Lex Pattison for this [fantastic quote.](https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html?showComment=1369929860616#c5181256978273365658)
 
 ## All tests are integration tests
 
@@ -382,7 +387,7 @@ described above, work great here.
 
 2. **Write your production code so you can reuse as much of it in tests as possible.** In 
 particular, encapsulate your business logic, of which there is really only one correct 
-implementation by definition, in reusable classes with injected dependencies. 
+implementation by definition, in reusable classes with injected dependencies.
 
 By avoiding doubles at all, you've saved yourself the time of reimplementing code you've already 
 written and already tested. More importantly, your tests aren't lying to you; they actually provide 
@@ -396,7 +401,7 @@ integration vs component vs end to end or whatever, I recommend sticking to Goog
 If you're getting hives thinking about all the places bugs could lurk without isolating a unit–I 
 used to–ask yourself, why are we so comfortable using the standard library, or Apache commons, or 
 Guava, without mocking that code out too? We trust that code. Why? **We trust code that has its 
-own tests.**^[2]
+own tests.**^[3]
 
 We can think of our own code no differently than the standard library. If we organize our code in 
 layers, where each layer depends on a well-tested layer beneath it, we rarely need to replace 
@@ -490,16 +495,16 @@ I used to fight really hard with my tests to avoid this overlap.
 
 It was far more trouble than it was worth.
 
-The thing is, these aren't actually that redundant when you think about it. Remember, when you or 
-your teammates uses some class in your application, you expect it to adhere to its contract, period.
-This is what tests do: assert things implement their contracts. How they implement them doesn't 
-matter to your tests, and nor should it matter to you (otherwise, how can you hope to survive in a 
-complex code base if you have to keep the whole thing in your head?). If one of these tests fail, 
-yes, it's quite possible the problem is in another class instead of the one under test. But as we
-discussed, you should also have tests against _that_ class. And if this case is missing, great!
-You found a missing test, and a bug! You wouldn't have found this bug (until production, if at all)
-if you replaced the dependency with a mock, and what is the point of tests if not to discover bugs 
-before production?
+The thing is, **these aren't actually that redundant when you think about it.** Remember, when you 
+or your teammates uses some class in your application, you expect it to adhere to its contract, 
+period. This is what tests do: assert things implement their contracts. How they implement them 
+doesn't matter to your tests, and nor should it matter to you (otherwise, how can you hope to 
+survive in a complex code base if you have to keep the whole thing in your head?). If one of these 
+tests fail, yes, it's quite possible the problem is in another class instead of the one under test. 
+But as wediscussed, you should also have tests against _that_ class. And if this case is missing, 
+great! You found a missing test, and a bug! You wouldn't have found this bug (until production, if 
+at all) if you replaced the dependency with a mock, and what is the point of tests if not to 
+discover bugs before production?
 
 I also illustrated the worst of it. In practice, tests at lower levels get much more detailed than
 upper levels, thoroughly testing all branches in your domain objects, since that's where most of 
@@ -509,11 +514,11 @@ pyramid, with lots of small, fast tests, and fewer larger, slow tests.
 
 <div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="426" data-original-width="694" src="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png"/></a></div>
 
-What redundancy there is merely a reflection of the obvious: code relies on other code. And by 
+**What redundancy is left is merely a reflection of the obvious: code relies on other code.** And by 
 definition that means when we test code, we're (re)testing other code, whether we wrote it or not, 
 all the time. By accepting it, you've freed yourself up to reuse an entire application of code 
 rather than replacing it throughout your tests, and you know your tests actually reflect 
-reality^[3].
+reality^[4].
 
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
 [why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
@@ -523,11 +528,11 @@ reality^[3].
 
 ---
 
-^2: For further exploration of tested or "well understood" as the boundary for "unit" vs 
+^3: For further exploration of tested or "well understood" as the boundary for "unit" vs 
 "integration" tests, check out the legendary Kent Beck's post, ["Unit" 
 Tests?](https://www.facebook.com/notes/kent-beck/unit-tests/1726369154062608/).
 
-^3: Admittedly, the only reality is actual production, which is why testing mustn't stop at the door
+^4: Admittedly, the only reality is actual production, which is why testing mustn't stop at the door
 of prod, but embrace it through monitoring, observability, feature flags, and the like. But there's 
 no reason you shouldn't try to get close to production on your laptop, especially where doing so 
 saves you so much time to boot.
