@@ -7,7 +7,7 @@ applications of domain-driven design and in-memory test doubles (fakes).">
 Much has been said about mocks, the controversial, Swiss army knife of test doubles: 
 
 * Don't use them too much [(source)][don't-mock-everything] [(source)][don't-overuse-mocks]
-* Know when to verify state or when to verify interactions [(source)][verify-state-or-interactions]
+* Know when to use them at all [(source)][verify-state-or-interactions]
 * Don't test implementation detail [(source)][change-detector] 
 * Don't mock types you don't own [(source)][don't-mock-third-party-types]
 * Only mock classes when dealing with legacy code [(source)][mock-classes]
@@ -48,10 +48,10 @@ It's {metaprogramming}: code that implements types at runtime rather than using 
 features to implement types at compile time.
 
 Mockito's API optimizes for immediate convenience–justifiably so–but **it's this immediate 
-convenience that dominates our thinking.** While less sexy, a compile-time implementation has its 
-own conveniences. Unfortunately, they are easily overlooked because they take just a little time and
-investment in the short term before you can see them. By first reviewing some mocking pitfalls, 
-we'll start to see how taking the time to write a class can pay off.
+convenience that dominates our thinking.** While less sexy, a compile-time implementation (a
+class) has its own conveniences. Unfortunately, they are easily overlooked because they take just a 
+little time and investment in the short term before you can see them. By first reviewing some 
+mocking pitfalls, we'll start to see how taking the time to write a class can pay off.
 
 // Most times, we don't see the complexity required to implement runtime metaprogramming as a 
 // tradeoff, thanks to Mockito's well-designed abstractions. But occasionally, those abstractions 
@@ -103,15 +103,17 @@ class OrderProcessorTest {
 
   @Test
   void throwsIfAccountOnCreditHold() {
-      // This works with the current implementation, but what if our implementation 
-      // instead changes to just call `charge` instead of first calling `checkCredit`, 
-      // relying on the fact that `charge` will throw an exception in this case? The 
-      // test will start failing, but actually there is no problem in the production 
-      // code. This test is coupled to implementation detail.
       when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
       assertThrows(
           CreditHoldException.class, 
           () -> orderService.processOrder(account1, testOrder));
+      
+      // The above test works with the current implementation, but what if our 
+      // implementation  instead changes to just call `charge` instead of first 
+      // calling `checkCredit`, relying on the fact that `charge` will throw an 
+      // exception in this case? The test will start failing, but actually there 
+      // is no problem in the production code. This test is coupled to 
+      // implementation detail.
   }
 }
 ```
@@ -176,6 +178,7 @@ class InMemoryCreditService implements CreditService {
   }
 }
 ```
+
 [don't-spy]: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#13
 [change-detector]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
 
@@ -191,7 +194,7 @@ Just as when we aimlessly add getters and setters, habitual mocking risks missin
 object-orientation: objects as reusable, cohesive abstractions.
 
 For example, test setup often has a higher order semantic meaning mock DSLs end up obfuscating. When
-we stub an external service as in the example above... 
+we stub an external service as in the example above...
 
 ```java
 when(creditService.checkCredit(AccountId.of(1))).thenReturn(HOLD);
@@ -243,14 +246,13 @@ As your class becomes more complete, it'll start to look more like a [{fake}][mo
 {stub}. You've used a fake any time you've tested with an in-memory database. A fake is a complete 
 implementation of some interface suitable for testing.
 
-Any time you replace a non-trivial dependency, you should really ensure that replacement has its own 
+Any time you replace a non-trivial dependency, you should really ensure that replacement has its own
 tests. **This ensures that when you use a test double instead of the real thing, you haven't 
-invalidated your tests.** In this way, a fake also becomes a demonstration of how some type is 
-supposed to work. It's a reference implementation, a testbed for experimentation, as well as 
-documentation for ourselves, our teammates, and our successors. 
+invalidated your tests.** If you're clever, you can even reuse the same tests as your production implementation–and you absolutely should. It saves you time and gives you confidence. 
 
-If you're clever, you can even reuse the same tests as your production implementation–and you 
-absolutely should. It saves you time and gives you confidence. 
+In this way, a fake also becomes a demonstration of how some type is supposed to work. It's can 
+become a kind of reference implementation and testbed, serving as documentation for ourselves, our 
+teammates, and our successors.
 
 ```java
 // Example pattern to test a fake and production implementation against same tests
@@ -289,26 +291,25 @@ class MongoRepositoryTest extends RepositoryContract {
 }
 ```
 
-// Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of complexity 
-in test setup, and aren't the focus of most of your tests anyway. For example, they can just ignore 
-solutions for nonvolatile persistence and high-performance concurrency control that we expect of our
-production persistence abstractions, and which usually require a full database (such as in the 
-example above, which would require downloading, starting, and managing a MongoDB process). An 
-implementation can avoid the filesystem all together with in memory state, and can `synchronize` all
-of its methods to quickly make it thread-safe.
+// Fakes can avoid cross-cutting, production, and operational concerns that cause a lot of 
+complexity in test setup, and aren't the focus of most of your tests anyway. For example, they can 
+just ignore solutions for nonvolatile persistence and high-performance concurrency control that we 
+expect of our production persistence abstractions, and which usually require a full database (such 
+as in the example above, which would require downloading, starting, and managing a MongoDB process). 
+An implementation can avoid the filesystem all together with in-memory state, and can `synchronize` 
+all of its methods to quickly make it thread-safe.
 
 [mocks-vs-stubs]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
 
 ## Fakes as a feature
 
-As the software industry is increasingly concerned with instrumenting code for observability and 
-safe, frequent production rollouts, fakes increasingly make sense as a shipped _feature of our 
-software_ rather than merely compiled-away test code. As a feature, fakes work as in-memory, 
-out-of-the-box replacements of complicated external process dependencies and the burdensome 
-configuration and coupling they bring along with them. **Running a service can then be effortless by 
-way of a default, in-memory configuration**, also called a [hermetic server][hermetic-server] (as in 
-"hermetically sealed"). As a feature, it is one of developer experience, though it still [profoundly
-impacts customer experience through safer and faster delivery][accelerate].
+As the software industry is increasingly concerned with safe, frequent production rollouts, fakes increasingly make sense as a shipped _feature of our software_ rather than merely compiled-away test 
+code. As a feature, fakes work as in-memory, out-of-the-box replacements of complicated external 
+process dependencies and the burdensome configuration and coupling they bring along with them. 
+**Running a service can then be effortless by way of a default, in-memory configuration**, also 
+called a [hermetic server][hermetic-server] (as in "hermetically sealed"). As a feature, it is one 
+of developer experience, though it still [profoundly impacts customer experience through safer and 
+faster delivery][accelerate].
 
 The ability to quickly and easily start any version of your service with zero external dependencies 
 is game changing. A new teammate can start up your services locally with simple system setup and one
@@ -342,10 +343,11 @@ writing lots of unit tests is good, because of something about a [pyramid and an
 cone][move-fast-don't-break-things], so we have to make sure most of our tests only use isolated 
 units, so that most of our tests are unit tests.
 
-So let's back up. **Why are we "isolating units" in the first place?**
+So let's back up. **Why are we replacing dependencies in order to "isolate units" in the first 
+place?**
 
-* With fewer dependencies, there is fewer places to look when there is a test failure. This means we
-can fix bugs faster, so we can _ship to our users more frequently_.
+* With stubbed dependencies, there are fewer places to look when there is a test failure. This means 
+we can fix bugs faster, so we can _ship to our users more frequently_.
 * Dependencies can be heavy, like databases or other servers which take time to set up, slowing down
 the tests and their essential feedback. Replacing those with fast test doubles means faster feedback
 cycles, and faster feedback cycles means we can _ship to our users more frequently_.
@@ -353,10 +355,11 @@ cycles, and faster feedback cycles means we can _ship to our users more frequent
 These two [why stacks][why-stacks] all eventually converge at the same reason, **the reason we 
 write tests in the first place: to ship more value, more quickly** (after all, [features which 
 improve safety also improve speed][beyond-ops]). While replacing collaborators can help as 
-described, replacing collaborators *also* has effects directly counter to this end goal. Because 
-those replacements aren't what we actually ship, **when you replace dependencies, your feedback 
-cycles slow down** because you aren't actually seeing your code as it truly works until you deploy 
-and get it in front of users. If you don't have good monitoring, you may not even see it then.
+described, replacing collaborators *also* has effects directly counter to this end goal. That is,
+because those replacements aren't what we actually ship, **when you replace dependencies, your 
+feedback cycles actually slow down** because you aren't actually seeing your code as it truly works 
+until you deploy and get it in front of users. If you don't have good monitoring, you may not even 
+see it then.
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
 > becomes.^[1]
@@ -393,9 +396,10 @@ used to–ask yourself, why are we so comfortable using the standard library, or
 Guava, without mocking that code out too? We trust that code. Why? **We trust code that has its 
 own tests.**^[2]
 
-The same can be true of our own code. If we organize our code in layers, where each layer depends on
-a well-tested layer beneath it, we rarely need to replace dependencies with test doubles at all. The
-bug shouldn't be _there_, because we've tested _there_, mitigating one of the "cons" of integration.
+We can think of our own code no differently than the standard library. If we organize our code in 
+layers, where each layer depends on a well-tested layer beneath it, we rarely need to replace 
+dependencies with test doubles at all. Simply use the real thing. The bug shouldn't be _there_, 
+because we've tested _there_, mitigating one of the "cons" of integration.
 
 <div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s2048/app_architecture.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" height="600" data-original-height="2048" data-original-width="1948" src="https://1.bp.blogspot.com/--wWnJ8UntFU/X53cMnbuReI/AAAAAAAAWbA/P4krjkQNHr8AlhYEZrstPfYLk4LhjrCrgCPcBGAYYCw/s600/app_architecture.png"/></a></div>
 
@@ -421,22 +425,30 @@ class ApplicationTest {
   // A larger test, with broad scope and slow startup due to Spring and 
   // web server initialization. We're not just testing business logic,
   // but particularly focused on the transport specifics and application 
-  // wiring.
+  // wiring: JSON serialization works how we expect, the status codes are
+  // right, etc. These things are often dependent on Spring configuration,
+  // and if our tests use different Spring configuration than production,
+  // what are we really testing? That's why an in-memory configuration,
+  // which only replaces external dependencies, is crucial.
   @Test
   void placesOrderWithAccountInGoodCreditStanding() {
-    // assume some requests to define the subscriptions in an order...
+    assertOk(restTemplate.postForEntity(
+        "/v1/orders/",
+        new HttpEntity<>(ImmutableMap.of("subscription", "SKU1")),
+        Map.class));
 
     assertOk(restTemplate.postForEntity(
         "/v1/orders/1/",
         new HttpEntity<>(ImmutableMap.of("account", 1)),
         Map.class));
     
+    // It's okay to directly use another layer if some important observable
+    // affects of an API are external.
     assertThat(subscriptions.forAccount(AccountId.of(1))).hasSize(1);
   }
   
-  // Other tests here need not all be business scenarios; they may be
-  // error scenarios, particularly focused on the HTTP specifics like
-  // status codes and serialization, etc.
+  // Other tests can also be more technical and protocol specific like 
+  // JSON parse failure handling, or authentication protocol support, etc.
 }
 
 // Medium tests; fast but still broad.
@@ -477,8 +489,8 @@ I used to fight really hard with my tests to avoid this overlap.
 It was far more trouble than it was worth.
 
 The thing is, these aren't actually that redundant when you think about it. Remember, when you or 
-your teammates uses some class in your application, you expect it to adhere to its contract; period.
-This is what tests do–assert things implement their contracts. How they implement them doesn't 
+your teammates uses some class in your application, you expect it to adhere to its contract, period.
+This is what tests do: assert things implement their contracts. How they implement them doesn't 
 matter to your tests, and nor should it matter to you (otherwise, how can you hope to survive in a 
 complex code base if you have to keep the whole thing in your head?). If one of these tests fail, 
 yes, it's quite possible the problem is in another class instead of the one under test. But as we
@@ -487,11 +499,9 @@ You found a missing test, and a bug! You wouldn't have found this bug (until pro
 if you replaced the dependency with a mock, and what is the point of tests if not to discover bugs 
 before production?
 
-I also picked an extreme example. In practice, tests at lower levels get much more detailed, 
-thoroughly testing all branches in your domain objects, since that's where most of your business 
-logic is (or should be) anyway. Individual upper layers likely won't be able to reach all those 
-branches, and don't really need to try. As a result, you end up with a familiar test pyramid, with
-lots of small, fast tests, and fewer larger, slow tests.
+I also illustrated the worst of it. In practice, tests at lower levels get much more detailed than
+upper levels, thoroughly testing all branches in your domain objects, since that's where most of your business logic is (or should be) anyway. Individual upper layers likely won't be able to reach all those branches, and don't really need to try. As a result, you end up with a familiar test pyramid, 
+with lots of small, fast tests, and fewer larger, slow tests.
 
 <div class="separator" style="clear: both;"><a href="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png" style="display: block; padding: 1em 0; text-align: center; "><img alt="" border="0" data-original-height="426" data-original-width="694" src="https://1.bp.blogspot.com/-3FD0rEPXtDg/X58wwHQqwdI/AAAAAAAAWdw/5tmFjNH0khojczBXEsslNYlfIVXnr7GXACLcBGAsYHQ/s0/Test%2Bpyramid.png"/></a></div>
 
@@ -501,7 +511,6 @@ all the time. By accepting it, you've freed yourself up to reuse an entire appli
 rather than replacing it throughout your tests, and you know your tests actually reflect 
 reality^[3].
 
-[brain-on-tidiness]: https://www.cnn.com/style/article/this-is-your-brain-on-tidiness/index.html
 [move-fast-don't-break-things]: https://docs.google.com/presentation/d/15gNk21rjer3xo-b1ZqyQVGebOp_aPvHU3YH7YnOMxtE/edit#slide=id.g437663ce1_53_98
 [why-stacks]: https://mikebroberts.com/2003/07/29/popping-the-why-stack/
 [beyond-ops]: https://www.heavybit.com/library/podcasts/o11ycast/ep-23-beyond-ops-with-erwin-van-der-koogh-of-linc/
@@ -525,8 +534,8 @@ It's not to say mocks don't have their place, but many business applications ben
 world: a world without mocks. In fact, in the simplest world, you'd reuse all the implementations 
 you've already written.
 
-Focusing on the testing the contract of the class under test. Don't worry if the tests are somehow 
-redundant–if the application is otherwise well architected, that's only a matter of implementation. 
+Focus on the testing the contract of the class under test. Don't worry if the tests are somehow 
+redundant. If the application is otherwise well architected, that's only a matter of implementation. 
 What matters is that the class, in conjunction with obedient collaborators, implements its own 
 contract.
 
@@ -540,7 +549,7 @@ to enable lightweight modes of execution.
 
 Most of all, don't get too complacent with your usual solutions or tools. Change it up. You never
 know what new world you may discover.
- 
+
 [don't-overuse-mocks]: https://testing.googleblog.com/2013/05/testing-on-toilet-dont-overuse-mocks.html
 [mocks-are-stupid]: https://www.endoflineblog.com/testing-with-doubles-or-why-mocks-are-stupid-part-4#2-mocks-are-stupid-and-so-are-stubs-
 [service-call-contracts]: https://testing.googleblog.com/2018/11/testing-on-toilet-exercise-service-call.html
