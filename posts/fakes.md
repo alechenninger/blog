@@ -359,7 +359,7 @@ write tests in the first place: to ship more value, more quickly** (after all, [
 improve safety also improve speed][beyond-ops]). While replacing collaborators can help as 
 described, replacing collaborators *also* has effects directly counter to this end goal. That is,
 **when you replace dependencies, your feedback cycles actually slow down** because those 
-replacements *aren't what we actually ship*. You aren't ever seeing your code as it truly works 
+replacements *aren't what you actually ship*. You aren't ever seeing your code as it truly works 
 until you deploy and get it in front of users^[1]. If you don't have good monitoring, you may not even 
 see it work–or not!–then.
 
