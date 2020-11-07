@@ -110,7 +110,7 @@ class OrderProcessorTest {
           () -> orderService.processOrder(account1, testOrder));
       
       // The above test works with the current implementation, but what if our 
-      // implementation  instead changes to just call `charge` instead of first 
+      // implementation instead changes to just call `charge` instead of first 
       // calling `checkCredit`, relying on the fact that `charge` will throw an 
       // exception in this case? The test will start failing, but actually there 
       // is no problem in the production code. This test is coupled to 
