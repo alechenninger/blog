@@ -1,8 +1,7 @@
 <meta name="id" content="7799320222051028141">
 <meta name="labels" content="testing,object oriented programming,java,microservices,domain-driven design">
 <meta name="title" content="The secret world of testing without mocking: domain-driven design, fakes, and other patterns to simplify testing in a microservice architecture">
-<meta name="description" content="How to simplify microservice testing through a few simple 
-applications of domain-driven design and in-memory test doubles (fakes).">
+<meta name="description" content="How to simplify microservice testing through a few simple applications of domain-driven design and in-memory test doubles (fakes).">
 
 Much has been said about mocks, the controversial, Swiss army knife of test doubles: 
 
@@ -360,8 +359,8 @@ improve safety also improve speed][beyond-ops]). While replacing collaborators c
 described, replacing collaborators *also* has effects directly counter to this end goal. That is,
 **when you replace dependencies, your feedback cycles actually slow down** because those 
 replacements *aren't what you actually ship*. You aren't ever seeing your code as it truly works 
-until you deploy and get it in front of users^[1]. If you don't have good monitoring, you may not even 
-see it work–or not!–then.
+until you deploy and get it in front of users^[1]. If you don't have good monitoring, you may not 
+see it work–or not!–even then.
 
 > Mocks are like hard drugs... the more you use, the more separated from reality everything 
 > becomes.^[2]
