@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
-import 'package:blogtool/build.dart';
 import 'package:blogtool/blog.dart';
+import 'package:blogtool/build.dart';
 import 'package:cli_util/cli_logging.dart';
 import 'package:file/local.dart';
 import 'package:file/src/interface/directory.dart';
@@ -13,7 +13,6 @@ import 'package:googleapis/blogger/v3.dart' show BloggerApi;
 import 'package:googleapis_auth/auth.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:path/path.dart';
-import 'package:pedantic/pedantic.dart';
 
 var fs = LocalFileSystem();
 var posts = fs.directory('posts');
@@ -21,7 +20,7 @@ var logger = Logger.standard();
 var closeEm = [];
 
 void main(List<String> arguments) async {
-  var runner = CommandRunner('build_blog', 'builds posts under posts/')
+  var runner = CommandRunner('blog', 'builds posts under posts/')
     ..addCommand(StartPost())
     ..addCommand(Build())
     ..addCommand(Watch())
