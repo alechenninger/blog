@@ -246,7 +246,7 @@ As your class becomes more complete, it'll start to look more like a [{fake}][mo
 {stub}. You've used a fake any time you've tested with an in-memory database. A fake is a complete 
 implementation of some interface suitable for testing.
 
-Any time you replace a non-trivial dependency, you should really ensure that replacement has its own
+Any time you replace a non-trivial dependency, you should really ensure the replacement has its own
 tests. **This ensures that when you use a test double instead of the real thing, you haven't 
 invalidated your tests.** If you're clever, you can even reuse the same tests as your production 
 implementation–and you absolutely should. It saves you time and gives you confidence. 
