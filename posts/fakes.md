@@ -500,7 +500,7 @@ period. This is what tests do: assert things implement their contracts. How they
 doesn't matter to your tests, and nor should it matter to you (otherwise, how can you hope to 
 survive in a complex code base if you have to keep the whole thing in your head?). If one of these 
 tests fail, yes, it's quite possible the problem is in another class instead of the one under test. 
-But as wediscussed, you should also have tests against _that_ class. And if this case is missing, 
+But as we discussed, you should also have tests against _that_ class. And if this case is missing, 
 great! You found a missing test, and a bug! You wouldn't have found this bug (until production, if 
 at all) if you replaced the dependency with a mock, and what is the point of tests if not to 
 discover bugs before production?
