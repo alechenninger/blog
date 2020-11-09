@@ -20,7 +20,7 @@ to refer specifically to a mock or stub configured by way of a mocking library l
 Likewise, when I refer to Mockito, I really mean any mocking library; Mockito just stands out 
 because it has a welcoming API and is–no doubt as a consequence–measurably very popular.
 
-I was there too, once a frequent Mockito user, perhaps like you are now. Over time however, as my 
+I was there too once, a frequent Mockito user, perhaps like you are now. Over time however, as my 
 application architectures improved, as I began to introduce [real domain 
 models][anemic-architecture-testing], the tests I wrote were becoming simpler, easier to add, and 
 services easier to develop. Tricky testing problems that loomed over my head for years now had 
@@ -184,7 +184,7 @@ class InMemoryCreditService implements CreditService {
 
 ## Object-oriented test double
 
-Admittedly, our class isn't all that impressive yet. We're just getting warmed up. **A classes real 
+Admittedly, our class isn't all that impressive yet. We're just getting warmed up. **A class's real 
 power comes from encapsulation.** A class is not just a collection of delicately specific stubs, but
 a persistent, evolvable and cohesive implementation devoted to the problem of testing.
 
